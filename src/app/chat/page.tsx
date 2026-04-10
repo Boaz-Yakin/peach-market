@@ -1,0 +1,124 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabaseBrowser";
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+interface ChatRoom {
+  id: string;
+  item: {
+    id: string;
+    title: string;
+    image_url: string;
+  };
+  seller_id: string;
+  buyer_id: string;
+  created_at: string;
+}
+
+export default function ChatListPage() {
+  const [rooms, setRooms] = useState<ChatRoom[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const supabase = createClient();
+  const router = useRouter();
+
+  useEffect(() => {
+    const fetchRooms = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/profile");
+        return;
+      }
+
+      // 내가 구매자거나 판매자인 방을 모두 가져옴
+      const { data, error } = await supabase
+        .from("chat_rooms")
+        .select(`
+          id,
+          seller_id,
+          buyer_id,
+          created_at,
+          item:items (
+            id,
+            title,
+            image_url
+          )
+        `)
+        .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("채팅방을 가져오는 중 에러 발생:", error);
+      } else if (data) {
+        setRooms(data as unknown as ChatRoom[]);
+      }
+      setIsLoading(false);
+    };
+
+    fetchRooms();
+  }, [supabase, router]);
+
+  if (isLoading) return <div className="p-10 text-center">채팅 목록 불러오는 중... 🍑</div>;
+
+  return (
+    <div className="flex flex-col min-h-screen bg-white">
+      {/* 헤더 */}
+      <header className="sticky top-0 z-40 bg-white border-b border-gray-100 flex items-center px-4 h-14 shadow-sm pt-4">
+        <button onClick={() => router.back()} className="p-2 -ml-2 text-gray-600 hover:text-gray-900 transition-colors">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        <h1 className="text-[18px] font-bold text-gray-900 ml-2">채팅</h1>
+      </header>
+
+      {/* 채팅방 리스트 */}
+      <main className="flex-1 pb-20">
+        {rooms.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-20 text-gray-400 space-y-3">
+            <span className="text-5xl">💬</span>
+            <p className="text-[15px]">아직 대화 중인 채팅방이 없어요.</p>
+            <Link href="/" className="text-[#ff6b6b] font-bold text-sm">
+              물건 구경하러 가기
+            </Link>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {rooms.map((room) => (
+              <Link 
+                key={room.id}
+                href={`/chat/${room.id}`}
+                className="flex items-center gap-4 px-4 py-4 active:bg-gray-50 transition-colors"
+              >
+                {/* 물건 이미지 */}
+                <div className="relative w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 shadow-sm">
+                  <Image src={room.item.image_url} alt={room.item.title} fill className="object-cover" />
+                </div>
+
+                {/* 방 정보 */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <h3 className="text-[15px] font-bold text-gray-900 truncate">
+                      익명의 복숭아
+                    </h3>
+                    <span className="text-[11px] text-gray-400">
+                      {new Date(room.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <p className="text-[14px] text-gray-500 truncate mb-1">
+                    {room.item.title}
+                  </p>
+                  <p className="text-[13px] text-gray-400 font-medium italic">
+                    새로운 대화를 이어가보세요! 🍑
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}

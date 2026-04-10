@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f9fafb;
+  --foreground: #111827;
+  --color-peach-light: #ffe4e1;
+  --color-peach: #ff8c82;
+  --color-peach-dark: #fc6456;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-noto-sans);
+  --color-peach: var(--color-peach);
+  --color-peach-light: var(--color-peach-light);
+  --color-peach-dark: var(--color-peach-dark);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #111827;
+    --foreground: #f9fafb;
+  }
+}
+
+body {
+  background-color: #f3f4f6; /* 회색 배경으로 앱 느낌 강조 */
+  color: var(--foreground);
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
