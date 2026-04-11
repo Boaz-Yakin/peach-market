@@ -79,6 +79,7 @@ export default function ChatRoomPage() {
       if (msgs) setMessages(msgs);
 
       // 4. 실시간 메시지 수신 설정
+      console.log("실시간 구독 시작:", roomId);
       const channel = supabase
         .channel(`room:${roomId}`)
         .on(
@@ -90,29 +91,30 @@ export default function ChatRoomPage() {
             filter: `room_id=eq.${roomId}` 
           },
           (payload) => {
+            console.log("새 메시지 수신!", payload);
             const newMessage = payload.new as Message;
-            // 내가 보낸 메시지는 이미 낙관적 업데이트로 추가되었으므로, 
-            // 다른 사람의 메시지만 실시간으로 추가함 (중복 방지)
             setMessages((prev) => {
               if (prev.some(m => m.id === newMessage.id)) return prev;
               
               const isFromMe = newMessage.sender_id === user.id;
-              if (isFromMe) {
-                 // 이미 낙관적 업데이트가 되어있을테니 무시하거나, 
-                 // 나중에 더 정교하게 처리하려면 여기서 매칭 로직 필요.
-                 // 일단 중복 제거를 위해 스킵.
-                 return prev;
-              }
+              if (isFromMe) return prev;
+              
               return [newMessage, ...prev];
             });
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log(`구독 상태 변경: ${status}`);
+          if (status === 'SUBSCRIBED') {
+            console.log('실시간 채널에 성공적으로 연결되었습니다! 🚀');
+          }
+        });
 
       // 마운트 후 및 상호작용 후 강제 포커스 (모바일 대응)
       inputRef.current?.focus();
       
       return () => {
+        console.log("구독 해제:", roomId);
         supabase.removeChannel(channel);
       };
     };
