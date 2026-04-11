@@ -142,9 +142,9 @@ export default function ChatRoomPage() {
     };
 
     const pollInterval = setInterval(() => {
-      // 이미 구독에 확실히 성공한 상태라면 굳이 폴링하지 않음 (서버 부하 감소)
-      // 단, 디버깅을 위해 일단 무조건 실행해 볼 수도 있습니다.
-      fetchLatestMessages();
+      if (document.visibilityState === "visible") {
+        fetchLatestMessages();
+      }
     }, 3000);
 
     // [C] 안전망 2: 폰 화면 켰을 때 / 브라우저 탭 돌아왔을 때 즉시 동기화
@@ -157,18 +157,29 @@ export default function ChatRoomPage() {
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      supabase.removeChannel(channel);
-      clearInterval(pollInterval);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      clearInterval(pollInterval);
+      if (channel) supabase.removeChannel(channel);
     };
-  }, [roomId, supabase]);
+  }, [roomId, supabase, currentUser?.id]);
 
-  // 3. 포커스 관리
+  // 3. 포커스 관리 및 자동 스크롤 관리
   useEffect(() => {
     if (roomInfo) {
       setTimeout(() => inputRef.current?.focus(), 500);
     }
   }, [roomInfo]);
+
+  // 새 메시지가 추가될 때마다 네이티브 스크롤을 최하단으로 유지
+  useEffect(() => {
+    // 0.1초 뒤에 스크롤을 이동하여 렌더링 후의 높이를 완벽하게 감지
+    setTimeout(() => {
+      window.scrollTo({
+        top: document.documentElement.scrollHeight,
+        behavior: "smooth",
+      });
+    }, 100);
+  }, [messages]);
 
   // 4. 채팅방 메뉴 기능
   const handleLeaveRoom = async () => {
