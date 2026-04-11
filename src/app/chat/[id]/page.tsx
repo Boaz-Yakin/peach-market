@@ -216,6 +216,12 @@ export default function ChatRoomPage() {
     if (error) {
       setMessages((prev) => prev.filter(m => m.id !== optimisticMessage.id));
       alert("메시지를 전송하지 못했습니다.");
+    } else {
+      // 메시지 전송 성공 시 => 만약 상대방이 "채팅방 나가기"를 했었더라도 다시 방을 강제 소환!
+      await supabase
+        .from("chat_rooms")
+        .update({ is_seller_left: false, is_buyer_left: false })
+        .eq("id", roomId);
     }
   };
 
