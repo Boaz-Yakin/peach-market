@@ -20,6 +20,7 @@ interface ChatRoom {
 
 export default function ChatListPage() {
   const [rooms, setRooms] = useState<ChatRoom[]>([]);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(true);
   const supabase = createClient();
   const router = useRouter();
@@ -60,6 +61,26 @@ export default function ChatListPage() {
         
         // 채팅방 목록 정렬 및 상태 업데이트
         setRooms(activeRooms as unknown as ChatRoom[]);
+
+        // 각 채팅방별 안읽은 메시지 갯수 계산
+        if (activeRooms.length > 0) {
+          const roomIds = activeRooms.map((r: any) => r.id);
+          const { data: unreadMsgs, error: unreadError } = await supabase
+            .from('messages')
+            .select('room_id, is_read')
+            .in('room_id', roomIds)
+            .neq('sender_id', user.id);
+
+          if (!unreadError && unreadMsgs) {
+            const counts: Record<string, number> = {};
+            unreadMsgs.forEach(m => {
+              if (m.is_read === false) {
+                counts[m.room_id] = (counts[m.room_id] || 0) + 1;
+              }
+            });
+            setUnreadCounts(counts);
+          }
+        }
       }
       setIsLoading(false);
     };
@@ -123,9 +144,16 @@ export default function ChatListPage() {
                 {/* 방 정보 */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between mb-0.5">
-                    <h3 className="text-[15px] font-bold text-gray-900 truncate">
-                      익명의 복숭아
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-[15px] font-bold text-gray-900 truncate">
+                        익명의 복숭아
+                      </h3>
+                      {unreadCounts[room.id] > 0 && (
+                        <span className="bg-red-500 text-white rounded-full px-1.5 py-0.5 text-[10px] font-bold shadow-sm flex-shrink-0 leading-none min-w-[16px] text-center">
+                          {unreadCounts[room.id] > 99 ? '99+' : unreadCounts[room.id]}
+                        </span>
+                      )}
+                    </div>
                     <span className="text-[11px] text-gray-400">
                       {new Date(room.created_at).toLocaleDateString()}
                     </span>
