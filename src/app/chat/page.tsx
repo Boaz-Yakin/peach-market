@@ -187,19 +187,19 @@ export default function ChatListPage() {
 
                 {/* 나가기 버튼 */}
                 <button
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.preventDefault();
                     if (!window.confirm("이 채팅방을 나가시겠습니까?\n더 이상 목록에 표시되지 않습니다.")) return;
                     
-                    // DB 업데이트 (낙관적 UI 반영)
-                    setRooms(prev => prev.filter(r => r.id !== room.id));
+                    // 1. 먼저 DB를 업데이트하고 완료를 기다림
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (user) {
+                      const updateColumn = user.id === room.seller_id ? "is_seller_left" : "is_buyer_left";
+                      await supabase.from("chat_rooms").update({ [updateColumn]: true }).eq("id", room.id);
+                    }
                     
-                    supabase.auth.getUser().then(({ data: { user } }) => {
-                      if (user) {
-                        const updateColumn = user.id === room.seller_id ? "is_seller_left" : "is_buyer_left";
-                        supabase.from("chat_rooms").update({ [updateColumn]: true }).eq("id", room.id).then();
-                      }
-                    });
+                    // 2. DB 업데이트 완료 후 UI에서 제거 (폴링이 다시 불러와도 DB에 이미 반영됨)
+                    setRooms(prev => prev.filter(r => r.id !== room.id));
                   }}
                   className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-gray-300 hover:text-red-500 transition-colors bg-white rounded-full z-10"
                   aria-label="채팅방 나가기"
