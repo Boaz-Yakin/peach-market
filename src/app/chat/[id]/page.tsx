@@ -28,12 +28,15 @@ interface ChatRoom {
 export default function ChatRoomPage() {
   const { id: roomId } = useParams<{ id: string }>();
   const router = useRouter();
-  const supabase = createClient();
+  
+  // Supabase 클라이언트를 한 번만 생성하도록 고정 (리렌더링 시 구독 끊김 방지)
+  const [supabase] = useState(() => createClient());
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [roomInfo, setRoomInfo] = useState<ChatRoom | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const currentUserRef = useRef<any>(null); // 실시간 리스너용 ref
   const [isConnected, setIsConnected] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -46,6 +49,7 @@ export default function ChatRoomPage() {
         return;
       }
       setCurrentUser(user);
+      currentUserRef.current = user;
 
       const { data: room } = await supabase
         .from("chat_rooms")
@@ -71,32 +75,40 @@ export default function ChatRoomPage() {
   useEffect(() => {
     if (!roomId) return;
 
+    console.log("구독 설정 시작:", roomId);
     const channel = supabase
-      .channel(`room:${roomId}`)
+      .channel(`room_channel_${roomId}`) // 채널명 유니크하게 수정
       .on(
         "postgres_changes",
         { 
           event: "INSERT", 
           schema: "public", 
-          table: "messages"
+          table: "messages",
+          filter: `room_id=eq.${roomId}` // 다시 필터 적용
         },
         (payload) => {
-          const newMessage = payload.new as Message;
-          if (newMessage.room_id !== roomId) return;
+          const incoming = payload.new as Message;
+          console.log("실시간 수신:", incoming);
+
+          // 내 메시지는 낙관적 업데이트로 이미 화면에 있음 -> 무시 (중복 방지)
+          if (incoming.sender_id === currentUserRef.current?.id) {
+            console.log("내가 보낸 메시지이므로 무시합니다.");
+            return;
+          }
 
           setMessages((prev) => {
-            if (prev.some(m => m.id === newMessage.id)) return prev;
-            // 내 메시지도 실시간 채널로 들어오지만, 이미 낙관적 UI로 처리됨.
-            // 하지만 타 기기/탭 접속을 고려해 ID가 없는 경우만 추가.
-            return [newMessage, ...prev];
+            if (prev.some(m => m.id === incoming.id)) return prev;
+            return [incoming, ...prev];
           });
         }
       )
       .subscribe((status) => {
+        console.log("구독 상태 변경:", status);
         setIsConnected(status === "SUBSCRIBED");
       });
 
     return () => {
+      console.log("구독 해제");
       supabase.removeChannel(channel);
     };
   }, [roomId, supabase]);
@@ -115,9 +127,9 @@ export default function ChatRoomPage() {
     const content = newMessage;
     setNewMessage("");
 
-    // 낙관적 업데이트 (최신 메시지를 가장 앞에 배치 - flex-col-reverse)
+    // 낙관적 업데이트
     const optimisticMessage: Message = {
-      id: Date.now().toString(),
+      id: `temp-${Date.now()}`,
       sender_id: currentUser.id,
       content: content,
       created_at: new Date().toISOString(),
@@ -131,9 +143,8 @@ export default function ChatRoomPage() {
     });
 
     if (error) {
-      console.error("메시지 전송 실패:", error);
       setMessages((prev) => prev.filter(m => m.id !== optimisticMessage.id));
-      alert("메시지를 보낼 수 없습니다.");
+      alert("메시지를 전송하지 못했습니다.");
     }
   };
 
