@@ -17,10 +17,11 @@
   --color-peach-dark: var(--color-peach-dark);
 }
 
+/* 다크모드에서도 배경과 텍스트가 겹치지 않도록 강제 설정 */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #111827;
-    --foreground: #f9fafb;
+    --background: #f9fafb; /* 다크모드에서도 기본은 라이트하게 유지 (앱 성격상) */
+    --foreground: #111827;
   }
 }
 

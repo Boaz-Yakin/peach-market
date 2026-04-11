@@ -174,7 +174,7 @@ export default function ChatRoomPage() {
                 }`}
               >
                 {msg.content}
-                <div className={`text-[10px] mt-1 ${isMe ? "text-white/70 text-right" : "text-gray-400"}`}>
+                <div className={`text-[10px] mt-1 ${isMe ? "text-white/90 text-right font-medium" : "text-gray-500 font-medium"}`}>
                   {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </div>
               </div>
@@ -195,7 +195,7 @@ export default function ChatRoomPage() {
           </button>
           <input
             type="text"
-            className="flex-1 bg-gray-100 rounded-full px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#ff6b6b]"
+            className="flex-1 bg-gray-100 rounded-full px-4 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#ff6b6b]"
             placeholder="메시지를 입력하세요"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}

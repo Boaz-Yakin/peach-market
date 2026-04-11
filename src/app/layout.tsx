@@ -23,7 +23,7 @@ export default function RootLayout({
     <html lang="ko" className={`${notoSansKr.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col font-sans">
         {/* 모바일 뷰어용 컨테이너 (Desktop 환경에서는 가운데 정렬된 모바일 사이즈 창으로 보임) */}
-        <div className="flex-grow w-full max-w-md mx-auto bg-white shadow-sm min-h-screen relative pb-16">
+        <div className="flex-grow w-full max-w-md mx-auto bg-white shadow-sm min-h-screen relative pb-16 text-gray-900">
           {children}
           <BottomNav />
         </div>

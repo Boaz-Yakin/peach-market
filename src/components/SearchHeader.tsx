@@ -38,7 +38,7 @@ export default function SearchHeader() {
             autoFocus
             type="text"
             placeholder="상품명, 동네 등으로 검색"
-            className="w-full bg-gray-100 rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#ff6b6b]"
+            className="w-full bg-gray-100 rounded-full px-4 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#ff6b6b]"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
