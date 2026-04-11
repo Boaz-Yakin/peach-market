@@ -34,11 +34,12 @@ export default function ChatRoomPage() {
   const [newMessage, setNewMessage] = useState("");
   const [roomInfo, setRoomInfo] = useState<ChatRoom | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isConnected, setIsConnected] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // 1. 방 정보 및 사용자 초기화
   useEffect(() => {
-    const initChat = async () => {
-      // 1. 현재 사용자 확인
+    const initData = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         router.push("/profile");
@@ -46,81 +47,66 @@ export default function ChatRoomPage() {
       }
       setCurrentUser(user);
 
-      // 2. 채팅방 및 상품 정보 가져오기
-      const { data: room, error: roomError } = await supabase
+      const { data: room } = await supabase
         .from("chat_rooms")
-        .select(`
-          id,
-          seller_id,
-          buyer_id,
-          item:items (
-            id,
-            title,
-            price,
-            image_url
-          )
-        `)
+        .select(`id, seller_id, buyer_id, item:items (id, title, price, image_url)`)
         .eq("id", roomId)
         .single();
 
-      if (roomError || !room) {
-        console.error("방 정보를 가져올 수 없습니다:", roomError);
-        return;
-      }
-      setRoomInfo(room as unknown as ChatRoom);
+      if (room) setRoomInfo(room as unknown as ChatRoom);
 
-      // 3. 기존 메시지 불러오기 (최신순 정렬 -> 레이아웃에서 reverse 처리)
       const { data: msgs } = await supabase
         .from("messages")
         .select("*")
         .eq("room_id", roomId)
-        .order("created_at", { ascending: false }); // 최신이 위로 오게 (flex-col-reverse 연동)
+        .order("created_at", { ascending: false });
 
       if (msgs) setMessages(msgs);
-
-      // 4. 실시간 메시지 수신 설정
-      console.log("실시간 구독 시작:", roomId);
-      const channel = supabase
-        .channel(`room:${roomId}`)
-        .on(
-          "postgres_changes",
-          { 
-            event: "INSERT", 
-            schema: "public", 
-            table: "messages", 
-            filter: `room_id=eq.${roomId}` 
-          },
-          (payload) => {
-            console.log("새 메시지 수신!", payload);
-            const newMessage = payload.new as Message;
-            setMessages((prev) => {
-              if (prev.some(m => m.id === newMessage.id)) return prev;
-              
-              const isFromMe = newMessage.sender_id === user.id;
-              if (isFromMe) return prev;
-              
-              return [newMessage, ...prev];
-            });
-          }
-        )
-        .subscribe((status) => {
-          console.log(`구독 상태 변경: ${status}`);
-          if (status === 'SUBSCRIBED') {
-            console.log('실시간 채널에 성공적으로 연결되었습니다! 🚀');
-          }
-        });
-
-      // 마운트 후 및 상호작용 후 강제 포커스 (모바일 대응)
-      inputRef.current?.focus();
-      
-      return () => {
-        console.log("구독 해제:", roomId);
-        supabase.removeChannel(channel);
-      };
     };
 
-    initChat();
+    initData();
   }, [roomId, supabase, router]);
+
+  // 2. 실시간 구독 (안정성 강화)
+  useEffect(() => {
+    if (!roomId) return;
+
+    const channel = supabase
+      .channel(`room:${roomId}`)
+      .on(
+        "postgres_changes",
+        { 
+          event: "INSERT", 
+          schema: "public", 
+          table: "messages"
+        },
+        (payload) => {
+          const newMessage = payload.new as Message;
+          if (newMessage.room_id !== roomId) return;
+
+          setMessages((prev) => {
+            if (prev.some(m => m.id === newMessage.id)) return prev;
+            // 내 메시지도 실시간 채널로 들어오지만, 이미 낙관적 UI로 처리됨.
+            // 하지만 타 기기/탭 접속을 고려해 ID가 없는 경우만 추가.
+            return [newMessage, ...prev];
+          });
+        }
+      )
+      .subscribe((status) => {
+        setIsConnected(status === "SUBSCRIBED");
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [roomId, supabase]);
+
+  // 3. 포커스 관리
+  useEffect(() => {
+    if (roomInfo) {
+      setTimeout(() => inputRef.current?.focus(), 500);
+    }
+  }, [roomInfo]);
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,10 +148,13 @@ export default function ChatRoomPage() {
             <polyline points="15 18 9 12 15 6"></polyline>
           </svg>
         </button>
-        <div className="flex-1 text-center truncate px-4">
-          <h1 className="font-bold text-[16px] text-gray-900">
-            {currentUser?.id === roomInfo.seller_id ? "구매자님과 대화" : "판매자님과 대화"}
-          </h1>
+        <div className="flex-1 text-center truncate px-2">
+          <div className="flex items-center justify-center gap-1.5">
+            <h1 className="font-bold text-[16px] text-gray-900 truncate">
+              {currentUser?.id === roomInfo.seller_id ? "구매자님" : "판매자님"}
+            </h1>
+            <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500 animate-pulse" : "bg-gray-300"}`} />
+          </div>
         </div>
         <div className="w-8" />
       </header>
