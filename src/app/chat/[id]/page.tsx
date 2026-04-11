@@ -274,7 +274,7 @@ export default function ChatRoomPage() {
               onChange={(e) => setNewMessage(e.target.value)}
             />
             {!newMessage && (
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none animate-bounce text-lg opacity-90 drop-shadow-sm">
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none animate-bounce text-lg drop-shadow-sm">
                 ✨
               </div>
             )}
@@ -282,7 +282,7 @@ export default function ChatRoomPage() {
           <button
             type="submit"
             disabled={!newMessage.trim()}
-            className="bg-peach-dark text-white w-10 h-10 rounded-full flex items-center justify-center disabled:bg-gray-200 transition-all active:scale-95 shadow-lg shadow-peach-dark/20"
+            className="bg-peach-dark text-white w-10 h-10 rounded-full flex items-center justify-center disabled:bg-gray-200 disabled:text-gray-500 transition-all active:scale-95 shadow-lg shadow-peach-dark/20"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="rotate-45 -translate-y-0.5 -translate-x-0.5">
               <line x1="22" y1="2" x2="11" y2="13"></line>
