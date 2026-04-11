@@ -114,6 +114,15 @@ export default function ChatRoomPage() {
     const content = newMessage;
     setNewMessage("");
 
+    // 낙관적 업데이트: 서버 응답 전 UI에 먼저 반영
+    const optimisticMessage: Message = {
+      id: Date.now().toString(),
+      sender_id: currentUser.id,
+      content: content,
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, optimisticMessage]);
+
     const { error } = await supabase.from("messages").insert({
       room_id: roomId,
       sender_id: currentUser.id,
@@ -122,6 +131,8 @@ export default function ChatRoomPage() {
 
     if (error) {
       console.error("메시지 전송 실패:", error);
+      // 실패 시 롤백 (간단하게 구현)
+      setMessages((prev) => prev.filter(m => m.id !== optimisticMessage.id));
       alert("메시지를 보낼 수 없습니다.");
     }
   };
