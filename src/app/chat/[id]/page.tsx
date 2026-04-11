@@ -71,57 +71,50 @@ export default function ChatRoomPage() {
     initData();
   }, [roomId, supabase, router]);
 
-  // 2. 실시간 구독 (모든 필터 제거 - 가장 확실한 방법)
+  // 2. 실시간 구독 (사용자 인증 확인 후 시작)
   useEffect(() => {
-    if (!roomId) return;
+    if (!roomId || !currentUser) return; // 사용자 정보가 올 때까지 대기
 
-    console.log("실시간 연결 시도... 방 ID:", roomId);
+    console.log("실시간 연결 시도 (인증됨):", currentUser.id);
 
-    const channel = supabase
-      .channel(`chat_room_${roomId}`)
-      .on(
-        "postgres_changes",
-        { 
-          event: "INSERT", 
-          schema: "public", 
-          table: "messages"
-          // 여기서 필터(filter)를 빼야 모바일에서 더 잘 작동하는 경우가 많습니다.
-        },
-        (payload) => {
-          console.log("신호 감지!!", payload);
-          const incoming = payload.new as Message & { room_id: string };
+    // 모바일에서는 브라우저 안정화 시간이 조금 필요할 수 있음
+    const timeout = setTimeout(() => {
+      const channel = supabase
+        .channel(`chat_room_${roomId}`)
+        .on(
+          "postgres_changes",
+          { 
+            event: "INSERT", 
+            schema: "public", 
+            table: "messages"
+          },
+          (payload) => {
+            console.log("신호 감지!!", payload);
+            const incoming = payload.new as Message & { room_id: string };
 
-          // 1. 방 ID가 일치하는지 수동 검사
-          if (incoming.room_id !== roomId) {
-            console.log("다른 방 메시지입니다. 무시합니다.");
-            return;
+            if (incoming.room_id !== roomId) return;
+
+            const myId = currentUserRef.current?.id;
+            if (myId && incoming.sender_id === myId) return;
+
+            setMessages((prev) => {
+              if (prev.some(m => m.id === incoming.id)) return prev;
+              return [incoming, ...prev];
+            });
           }
+        )
+        .subscribe((status, err) => {
+          console.log(`채널 상태(${roomId}): ${status}`, err || "");
+          setIsConnected(status === "SUBSCRIBED");
+        });
 
-          // 2. 내가 보낸 메시지인지 검사 (중복 방지)
-          // currentUserRef.current.id와 비교
-          const myId = currentUserRef.current?.id;
-          if (myId && incoming.sender_id === myId) {
-            console.log("내가 보낸 메시지가 서버에서 되돌아왔습니다. 낙관적 UI가 있으므로 추가하지 않습니다.");
-            return;
-          }
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }, 1000); // 1초 지연 후 구독 시작
 
-          console.log("상대방 메시지 추가 중...");
-          setMessages((prev) => {
-            if (prev.some(m => m.id === incoming.id)) return prev;
-            return [incoming, ...prev];
-          });
-        }
-      )
-      .subscribe((status, err) => {
-        console.log(`채널 상태: ${status}`, err || "");
-        setIsConnected(status === "SUBSCRIBED");
-      });
-
-    return () => {
-      console.log("채널 해제");
-      supabase.removeChannel(channel);
-    };
-  }, [roomId, supabase]);
+    return () => clearTimeout(timeout);
+  }, [roomId, supabase, currentUser]); // currentUser가 생기면 구독 시작
 
   // 3. 포커스 관리
   useEffect(() => {
