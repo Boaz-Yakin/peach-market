@@ -81,7 +81,7 @@ export default function ChatRoomPage() {
           .order("created_at", { ascending: false });
 
         if (msgs) setMessages(msgs);
-        setDebugStatus("연결 대기 중...");
+        // 여기서 더 이상 setDebugStatus를 호출하지 않음 (실시간 구독 effect에게 양보)
       } catch (err: any) {
         setDebugStatus(`초기화 실패: ${err.message}`);
       }
