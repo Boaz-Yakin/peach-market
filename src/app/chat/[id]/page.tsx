@@ -335,9 +335,9 @@ export default function ChatRoomPage() {
       {/* 입력창 - 화면 하단 스티키 고정 */}
       <footer className="sticky bottom-0 z-50 bg-white border-t border-gray-100 p-3 pb-safe">
         <form onSubmit={sendMessage} className="flex items-center gap-2 max-w-2xl mx-auto">
-          <div className="p-2">
-             <span className="text-xl animate-peach-pulse inline-block">🍑</span>
-          </div>
+          <Link href="/" className="p-2 flex-shrink-0 cursor-pointer transition-transform hover:scale-110 active:scale-95" title="홈으로 가기">
+             <span className="text-xl animate-peach-pulse inline-block drop-shadow-sm">🍑</span>
+          </Link>
           <div className="flex-1 relative">
             <input
               ref={inputRef}
