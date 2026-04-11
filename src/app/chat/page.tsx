@@ -59,27 +59,42 @@ export default function ChatListPage() {
           return true;
         });
         
-        // 채팅방 목록 정렬 및 상태 업데이트
-        setRooms(activeRooms as unknown as ChatRoom[]);
-
-        // 각 채팅방별 안읽은 메시지 갯수 계산
+        // 각 채팅방별 안읽은 메시지 갯수 계산 및 최근 메시지 기준 정렬
         if (activeRooms.length > 0) {
           const roomIds = activeRooms.map((r: any) => r.id);
-          const { data: unreadMsgs, error: unreadError } = await supabase
+          const { data: allMsgs, error: msgsError } = await supabase
             .from('messages')
-            .select('room_id, is_read')
-            .in('room_id', roomIds)
-            .neq('sender_id', user.id);
+            .select('room_id, is_read, created_at, sender_id')
+            .in('room_id', roomIds);
 
-          if (!unreadError && unreadMsgs) {
+          if (!msgsError && allMsgs) {
             const counts: Record<string, number> = {};
-            unreadMsgs.forEach(m => {
-              if (m.is_read === false) {
+            const lastActivity: Record<string, number> = {};
+
+            allMsgs.forEach(m => {
+              // 1. 안읽은 메시지 계산 (상대방이 보낸 것만)
+              if (m.is_read === false && m.sender_id !== user.id) {
                 counts[m.room_id] = (counts[m.room_id] || 0) + 1;
+              }
+              // 2. 이 방의 가장 최신 메시지 시간 갱신
+              const msgTime = new Date(m.created_at).getTime();
+              if (!lastActivity[m.room_id] || msgTime > lastActivity[m.room_id]) {
+                lastActivity[m.room_id] = msgTime;
               }
             });
             setUnreadCounts(counts);
+
+            // 3. activeRooms 재정렬 (최근 메시지 시간 우선, 없으면 방 생성 시간)
+            activeRooms.sort((a: any, b: any) => {
+              const timeA = lastActivity[a.id] || new Date(a.created_at).getTime();
+              const timeB = lastActivity[b.id] || new Date(b.created_at).getTime();
+              return timeB - timeA; // 내림차순 최상단 우선
+            });
           }
+          
+          setRooms(activeRooms as unknown as ChatRoom[]);
+        } else {
+          setRooms([]);
         }
       }
       setIsLoading(false);
