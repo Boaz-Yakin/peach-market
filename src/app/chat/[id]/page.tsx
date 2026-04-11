@@ -85,7 +85,18 @@ export default function ChatRoomPage() {
           .eq("room_id", roomId)
           .order("created_at", { ascending: false });
 
-        if (msgs) setMessages(msgs);
+        if (msgs) {
+          setMessages(msgs);
+          
+          // 방에 처음 진입했을 때 상대방 메시지 읽음 처리
+          if (user) {
+            await supabase.from("messages")
+              .update({ is_read: true })
+              .eq("room_id", roomId)
+              .neq("sender_id", user.id)
+              .eq("is_read", false);
+          }
+        }
         setDebugStatus("구독 준비됨");
       } catch (err: any) {
         setDebugStatus(`초기화 실패: ${err.message}`);
