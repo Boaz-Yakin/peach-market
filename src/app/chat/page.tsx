@@ -144,20 +144,23 @@ export default function ChatListPage() {
             </Link>
           </div>
         ) : (
-          <div className="divide-y divide-gray-50">
+          <div className="flex flex-col">
             {rooms.map((room) => (
-              <Link 
+              <div 
                 key={room.id}
-                href={`/chat/${room.id}`}
-                className="flex items-center gap-4 px-4 py-4 active:bg-gray-50 transition-colors"
+                className="relative flex items-center bg-white border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors"
               >
-                {/* 물건 이미지 */}
-                <div className="relative w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 shadow-sm">
-                  <Image src={room.item.image_url} alt={room.item.title} fill className="object-cover" />
-                </div>
+                <Link 
+                  href={`/chat/${room.id}`}
+                  className="flex-1 flex items-center gap-4 px-4 py-4 min-w-0"
+                >
+                  {/* 물건 이미지 */}
+                  <div className="relative w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100 shadow-sm border border-gray-100">
+                    <Image src={room.item.image_url} alt={room.item.title} fill className="object-cover" />
+                  </div>
 
-                {/* 방 정보 */}
-                <div className="flex-1 min-w-0">
+                  {/* 방 정보 */}
+                  <div className="flex-1 min-w-0 pr-8">
                   <div className="flex items-center justify-between mb-0.5">
                     <div className="flex items-center gap-2">
                       <h3 className="text-[15px] font-bold text-gray-900 truncate">
@@ -179,8 +182,33 @@ export default function ChatListPage() {
                   <p className="text-[13px] text-gray-400 font-medium italic">
                     새로운 대화를 이어가보세요! 🍑
                   </p>
-                </div>
-              </Link>
+                  </div>
+                </Link>
+
+                {/* 나가기 버튼 */}
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    if (!window.confirm("이 채팅방을 나가시겠습니까?\n더 이상 목록에 표시되지 않습니다.")) return;
+                    
+                    // DB 업데이트 (낙관적 UI 반영)
+                    setRooms(prev => prev.filter(r => r.id !== room.id));
+                    
+                    supabase.auth.getUser().then(({ data: { user } }) => {
+                      if (user) {
+                        const updateColumn = user.id === room.seller_id ? "is_seller_left" : "is_buyer_left";
+                        supabase.from("chat_rooms").update({ [updateColumn]: true }).eq("id", room.id).then();
+                      }
+                    });
+                  }}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-gray-300 hover:text-red-500 transition-colors bg-white rounded-full z-10"
+                  aria-label="채팅방 나가기"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                  </svg>
+                </button>
+              </div>
             ))}
           </div>
         )}
