@@ -38,19 +38,23 @@ export default function ChatRoomPage() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const currentUserRef = useRef<any>(null); // 실시간 리스너용 ref
   const [isConnected, setIsConnected] = useState(false);
+  const [debugStatus, setDebugStatus] = useState("초기화 중...");
   const inputRef = useRef<HTMLInputElement>(null);
 
   // 1. 방 정보 및 사용자 초기화
   useEffect(() => {
     const initData = async () => {
+      setDebugStatus("사용자 확인 중...");
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
+        setDebugStatus("로그인 필요");
         router.push("/profile");
         return;
       }
       setCurrentUser(user);
       currentUserRef.current = user;
 
+      setDebugStatus("방 정보 불러오는 중...");
       const { data: room } = await supabase
         .from("chat_rooms")
         .select(`id, seller_id, buyer_id, item:items (id, title, price, image_url)`)
@@ -66,6 +70,7 @@ export default function ChatRoomPage() {
         .order("created_at", { ascending: false });
 
       if (msgs) setMessages(msgs);
+      setDebugStatus("연결 준비 완료");
     };
 
     initData();
@@ -73,14 +78,13 @@ export default function ChatRoomPage() {
 
   // 2. 실시간 구독 (사용자 인증 확인 후 시작)
   useEffect(() => {
-    if (!roomId || !currentUser) return; // 사용자 정보가 올 때까지 대기
+    if (!roomId || !currentUser) return;
 
-    console.log("실시간 연결 시도 (인증됨):", currentUser.id);
-
-    // 모바일에서는 브라우저 안정화 시간이 조금 필요할 수 있음
+    // 모바일 안정화를 위해 충분한 시간을 둡니다
     const timeout = setTimeout(() => {
+      setDebugStatus("소켓 연결 시도...");
       const channel = supabase
-        .channel(`chat_room_${roomId}`)
+        .channel(`chat_room_${roomId}_${Date.now()}`) // 매번 유니크하게 시도
         .on(
           "postgres_changes",
           { 
@@ -89,9 +93,7 @@ export default function ChatRoomPage() {
             table: "messages"
           },
           (payload) => {
-            console.log("신호 감지!!", payload);
             const incoming = payload.new as Message & { room_id: string };
-
             if (incoming.room_id !== roomId) return;
 
             const myId = currentUserRef.current?.id;
@@ -104,17 +106,22 @@ export default function ChatRoomPage() {
           }
         )
         .subscribe((status, err) => {
-          console.log(`채널 상태(${roomId}): ${status}`, err || "");
+          console.log(`채널 상태: ${status}`, err || "");
+          setDebugStatus(`상태: ${status}`);
           setIsConnected(status === "SUBSCRIBED");
+          
+          if (status === "CHANNEL_ERROR") {
+             setDebugStatus("연결 오류! (RLS/복제 확인 필요)");
+          }
         });
 
       return () => {
         supabase.removeChannel(channel);
       };
-    }, 1000); // 1초 지연 후 구독 시작
+    }, 2000); // 2초 지연
 
     return () => clearTimeout(timeout);
-  }, [roomId, supabase, currentUser]); // currentUser가 생기면 구독 시작
+  }, [roomId, supabase, currentUser]);
 
   // 3. 포커스 관리
   useEffect(() => {
@@ -162,14 +169,15 @@ export default function ChatRoomPage() {
             <polyline points="15 18 9 12 15 6"></polyline>
           </svg>
         </button>
-        <div className="flex-1 text-center truncate px-2">
-          <div className="flex items-center justify-center gap-1.5">
-            <h1 className="font-bold text-[16px] text-gray-900 truncate">
-              {currentUser?.id === roomInfo.seller_id ? "구매자님" : "판매자님"}
-            </h1>
-            <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500 animate-pulse" : "bg-gray-300"}`} />
+          <div className="flex flex-col items-center justify-center">
+            <div className="flex items-center gap-1.5">
+              <h1 className="font-bold text-[16px] text-gray-900 truncate">
+                {currentUser?.id === roomInfo.seller_id ? "구매자님" : "판매자님"}
+              </h1>
+              <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500 animate-pulse" : "bg-gray-300"}`} />
+            </div>
+            <span className="text-[10px] text-gray-400 font-medium">{debugStatus}</span>
           </div>
-        </div>
         <div className="w-8" />
       </header>
 
