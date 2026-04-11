@@ -41,86 +41,95 @@ export default function ChatRoomPage() {
   const [debugStatus, setDebugStatus] = useState("초기화 중...");
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // 환경변수 체크용
+  const hasEnv = !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+
   // 1. 방 정보 및 사용자 초기화
   useEffect(() => {
+    if (!hasEnv) {
+      setDebugStatus("에러: Supabase 환경변수 누락!");
+      return;
+    }
+
     const initData = async () => {
-      setDebugStatus("사용자 확인 중...");
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        setDebugStatus("로그인 필요");
-        router.push("/profile");
-        return;
+      try {
+        setDebugStatus("사용자 확인 중...");
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        
+        if (authError || !user) {
+          setDebugStatus(`인증 오류: ${authError?.message || "로그인 필요"}`);
+          // router.push("/profile");
+          return;
+        }
+        
+        setCurrentUser(user);
+        currentUserRef.current = user;
+
+        setDebugStatus("방 정보 불러오는 중...");
+        const { data: room } = await supabase
+          .from("chat_rooms")
+          .select(`id, seller_id, buyer_id, item:items (id, title, price, image_url)`)
+          .eq("id", roomId)
+          .single();
+
+        if (room) setRoomInfo(room as unknown as ChatRoom);
+
+        const { data: msgs } = await supabase
+          .from("messages")
+          .select("*")
+          .eq("room_id", roomId)
+          .order("created_at", { ascending: false });
+
+        if (msgs) setMessages(msgs);
+        setDebugStatus("연결 대기 중...");
+      } catch (err: any) {
+        setDebugStatus(`초기화 실패: ${err.message}`);
       }
-      setCurrentUser(user);
-      currentUserRef.current = user;
-
-      setDebugStatus("방 정보 불러오는 중...");
-      const { data: room } = await supabase
-        .from("chat_rooms")
-        .select(`id, seller_id, buyer_id, item:items (id, title, price, image_url)`)
-        .eq("id", roomId)
-        .single();
-
-      if (room) setRoomInfo(room as unknown as ChatRoom);
-
-      const { data: msgs } = await supabase
-        .from("messages")
-        .select("*")
-        .eq("room_id", roomId)
-        .order("created_at", { ascending: false });
-
-      if (msgs) setMessages(msgs);
-      setDebugStatus("연결 준비 완료");
     };
 
     initData();
-  }, [roomId, supabase, router]);
+  }, [roomId, supabase, router, hasEnv]);
 
-  // 2. 실시간 구독 (사용자 인증 확인 후 시작)
+  // 2. 실시간 구독 (표준 패턴으로 회귀)
   useEffect(() => {
     if (!roomId || !currentUser) return;
 
-    // 모바일 안정화를 위해 충분한 시간을 둡니다
-    const timeout = setTimeout(() => {
-      setDebugStatus("소켓 연결 시도...");
-      const channel = supabase
-        .channel(`chat_room_${roomId}_${Date.now()}`) // 매번 유니크하게 시도
-        .on(
-          "postgres_changes",
-          { 
-            event: "INSERT", 
-            schema: "public", 
-            table: "messages"
-          },
-          (payload) => {
-            const incoming = payload.new as Message & { room_id: string };
-            if (incoming.room_id !== roomId) return;
+    setDebugStatus("실시간 채널 접속 시도...");
+    
+    const channel = supabase
+      .channel(`room_main_${roomId}`) // 고정된 채널명
+      .on(
+        "postgres_changes",
+        { 
+          event: "INSERT", 
+          schema: "public", 
+          table: "messages",
+          filter: `room_id=eq.${roomId}` // 다시 필터 적용 (표준)
+        },
+        (payload) => {
+          console.log("메시지 인입:", payload);
+          const incoming = payload.new as Message;
 
-            const myId = currentUserRef.current?.id;
-            if (myId && incoming.sender_id === myId) return;
+          setMessages((prev) => {
+            // 중복 방지 (이미 있거나 내 메시지인 경우)
+            if (prev.some(m => m.id === incoming.id)) return prev;
+            if (incoming.sender_id === currentUserRef.current?.id) return prev;
+            return [incoming, ...prev];
+          });
+        }
+      )
+      .subscribe((status, err) => {
+        setDebugStatus(`상태: ${status}`);
+        setIsConnected(status === "SUBSCRIBED");
+        if (err) {
+          console.error("구독 에러:", err);
+          setDebugStatus(`에러: ${err.message}`);
+        }
+      });
 
-            setMessages((prev) => {
-              if (prev.some(m => m.id === incoming.id)) return prev;
-              return [incoming, ...prev];
-            });
-          }
-        )
-        .subscribe((status, err) => {
-          console.log(`채널 상태: ${status}`, err || "");
-          setDebugStatus(`상태: ${status}`);
-          setIsConnected(status === "SUBSCRIBED");
-          
-          if (status === "CHANNEL_ERROR") {
-             setDebugStatus("연결 오류! (RLS/복제 확인 필요)");
-          }
-        });
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
-    }, 2000); // 2초 지연
-
-    return () => clearTimeout(timeout);
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [roomId, supabase, currentUser]);
 
   // 3. 포커스 관리
