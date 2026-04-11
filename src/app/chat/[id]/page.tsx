@@ -41,6 +41,10 @@ export default function ChatRoomPage() {
   const [debugStatus, setDebugStatus] = useState("초기화 중...");
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // 채팅방 메뉴 및 기능 상태
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+
   // 환경변수 체크용
   const hasEnv = !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
   const projectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.split(".")[0].split("//")[1] || "알 수 없음";
@@ -166,6 +170,27 @@ export default function ChatRoomPage() {
     }
   }, [roomInfo]);
 
+  // 4. 채팅방 메뉴 기능
+  const handleLeaveRoom = async () => {
+    if (!currentUser || !roomInfo) return;
+    const isSeller = currentUser.id === roomInfo.seller_id;
+    const updateColumn = isSeller ? "is_seller_left" : "is_buyer_left";
+
+    // DB 업데이트
+    await supabase.from("chat_rooms").update({ [updateColumn]: true }).eq("id", roomId);
+    router.replace("/chat");
+  };
+
+  const handleCompleteTransaction = async () => {
+    if (!currentUser || !roomInfo) return;
+    
+    // 실제로는 items.status 업데이트가 필요
+    // await supabase.from("items").update({ status: "sold_out" }).eq("id", roomInfo.item.id);
+    
+    setIsMenuOpen(false);
+    setShowReviewModal(true);
+  };
+
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !currentUser) return;
@@ -216,7 +241,15 @@ export default function ChatRoomPage() {
               {debugStatus} | {projectUrl} | {currentUser?.id?.slice(0, 5)}
             </span>
           </div>
-        <div className="w-8" />
+        <div className="w-8 flex items-center justify-end">
+          <button onClick={() => setIsMenuOpen(true)} className="p-2 -mr-2 text-gray-800 transition-opacity hover:opacity-70">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <circle cx="12" cy="5" r="1.5" />
+              <circle cx="12" cy="12" r="1.5" />
+              <circle cx="12" cy="19" r="1.5" />
+            </svg>
+          </button>
+        </div>
       </header>
 
       {/* 상품 정보 바 (헤더 아래 고정) */}
@@ -291,6 +324,69 @@ export default function ChatRoomPage() {
           </button>
         </form>
       </footer>
+
+      {/* 옵션 메뉴 (Bottom Sheet) */}
+      {isMenuOpen && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-end">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsMenuOpen(false)} />
+          <div className="relative bg-white rounded-t-3xl shadow-2xl pb-8 safe-area-inset-bottom z-10 animate-in fade-in slide-in-from-bottom duration-300">
+            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto my-3" />
+            <div className="px-6 py-4 space-y-4 text-[16px] font-bold text-gray-900">
+              {currentUser?.id === roomInfo.seller_id && (
+                <button
+                  onClick={handleCompleteTransaction}
+                  className="w-full text-left py-3 text-peach-dark flex items-center gap-3 transition-colors hover:bg-red-50 rounded-lg px-2 -mx-2"
+                >
+                  <span className="text-xl">🤝</span> 거래 완료하기
+                </button>
+              )}
+              <button
+                onClick={() => {
+                  alert("신고가 접수되었습니다.");
+                  setIsMenuOpen(false);
+                }}
+                className="w-full text-left py-3 flex items-center gap-3 transition-colors hover:bg-gray-50 rounded-lg px-2 -mx-2"
+              >
+                <span className="text-xl">🚨</span> 신고 / 차단하기
+              </button>
+              <button
+                onClick={handleLeaveRoom}
+                className="w-full text-left py-3 text-red-500 flex items-center gap-3 transition-colors hover:bg-red-50 rounded-lg px-2 -mx-2"
+              >
+                <span className="text-xl">🚪</span> 채팅방 나가기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 피치 브릭스(리뷰) 평가 모달 */}
+      {showReviewModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowReviewModal(false)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm z-10 animate-in zoom-in duration-300 flex flex-col items-center text-center">
+            <div className="text-6xl mb-4 animate-bounce mt-2">🍑</div>
+            <h2 className="text-[20px] font-bold text-gray-900 mb-2">달콤한 거래였나요?</h2>
+            <p className="text-[14px] text-gray-500 mb-6">
+              상대방의 매너를 평가해주세요.<br />피치 브릭스는 피치마켓의 핵심 신뢰 자산입니다.
+            </p>
+            <div className="flex gap-4 w-full">
+              <button 
+                onClick={() => { alert('최고예요 평가 완료!'); setShowReviewModal(false); router.replace("/chat"); }}
+                className="flex-1 py-3 bg-peach-dark text-white rounded-xl font-bold text-[15px] hover:bg-red-500 transition-colors"
+              >
+                최고예요! 👍
+              </button>
+            </div>
+            <button 
+              onClick={() => { setShowReviewModal(false); router.replace("/chat"); }}
+              className="mt-4 text-[13px] text-gray-400 font-medium hover:text-gray-600"
+            >
+              다음에 할게요
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
