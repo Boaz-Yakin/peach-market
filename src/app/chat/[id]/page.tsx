@@ -91,31 +91,32 @@ export default function ChatRoomPage() {
     initData();
   }, [roomId, supabase, router, hasEnv]);
 
-  // 2. 실시간 구독 (모든 필터를 빼고 '날것'으로 받기)
+  // 2. 실시간 구독 및 무적의 하이브리드 폴링 (어떤 상황에서도 채팅이 작동하도록 보장)
   useEffect(() => {
-    if (!roomId || !currentUser) return;
+    if (!roomId) return;
 
-    setDebugStatus("채널 무필터 접속...");
+    setDebugStatus("채널 접속중...");
     
+    // [A] Supabase 실시간 웹소켓 구독
     const channel = supabase
-      .channel(`chat_v2_${roomId}`) 
+      .channel(`room:${roomId}`) 
       .on(
         "postgres_changes",
         { 
           event: "INSERT", 
           schema: "public", 
-          table: "messages"
-          // 필터를 완전히 제거 (CHANNEL_ERROR 차단용)
+          table: "messages",
+          filter: `room_id=eq.${roomId}`
         },
         (payload) => {
-          const incoming = payload.new as Message & { room_id: string };
+          const incoming = payload.new as Message;
           
-          // 수동으로 내 방 메시지인지 체크
-          if (incoming.room_id !== roomId) return;
+          // 내 메시지는 낙관적 업데이트로 처리했으므로 무시 (중복 방지 - 클로저 문제 해결)
+          const myId = currentUserRef.current?.id;
+          if (myId && incoming.sender_id === myId) return;
 
           setMessages((prev) => {
             if (prev.some(m => m.id === incoming.id)) return prev;
-            if (incoming.sender_id === currentUserRef.current?.id) return prev;
             return [incoming, ...prev];
           });
         }
@@ -123,15 +124,40 @@ export default function ChatRoomPage() {
       .subscribe((status, err) => {
         setDebugStatus(`${status}`);
         setIsConnected(status === "SUBSCRIBED");
-        if (err) {
-          setDebugStatus(`오류: ${err.message}`);
-        }
       });
+
+    // [B] 안전망 1: 정기적 폴링 (웹소켓 실패, 모바일 네트워크 끊김 대비)
+    // 3초마다 조용히 최신 데이터를 가져옴 (실시간이 안 되어도 대화 가능)
+    const fetchLatestMessages = async () => {
+      const { data: msgs } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("room_id", roomId)
+        .order("created_at", { ascending: false });
+      if (msgs) setMessages(msgs);
+    };
+
+    const pollInterval = setInterval(() => {
+      // 이미 구독에 확실히 성공한 상태라면 굳이 폴링하지 않음 (서버 부하 감소)
+      // 단, 디버깅을 위해 일단 무조건 실행해 볼 수도 있습니다.
+      fetchLatestMessages();
+    }, 3000);
+
+    // [C] 안전망 2: 폰 화면 켰을 때 / 브라우저 탭 돌아왔을 때 즉시 동기화
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        setDebugStatus("화면 복귀 갱신");
+        fetchLatestMessages();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(pollInterval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [roomId, supabase, currentUser]);
+  }, [roomId, supabase]);
 
   // 3. 포커스 관리
   useEffect(() => {
