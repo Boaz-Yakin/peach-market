@@ -123,6 +123,11 @@ export default function ChatRoomPage() {
             if (prev.some(m => m.id === incoming.id)) return prev;
             return [incoming, ...prev];
           });
+
+          // 방을 보고 있는 도중에 메시지가 오면 즉시 '읽음' 처리
+          if (myId && incoming.sender_id !== myId && document.visibilityState === "visible") {
+            supabase.from("messages").update({ is_read: true }).eq("id", incoming.id).then();
+          }
         }
       )
       .subscribe((status, err) => {
@@ -138,7 +143,19 @@ export default function ChatRoomPage() {
         .select("*")
         .eq("room_id", roomId)
         .order("created_at", { ascending: false });
-      if (msgs) setMessages(msgs);
+        
+      if (msgs) {
+        setMessages(msgs);
+        
+        // 상대방이 보낸(내가 받지 않은) 메시지 중 안 읽은 것들을 '읽음' 처리
+        if (currentUser?.id) {
+          await supabase.from("messages")
+            .update({ is_read: true })
+            .eq("room_id", roomId)
+            .neq("sender_id", currentUser.id)
+            .eq("is_read", false);
+        }
+      }
     };
 
     const pollInterval = setInterval(() => {
