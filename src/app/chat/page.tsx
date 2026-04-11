@@ -32,27 +32,37 @@ export default function ChatListPage() {
         return;
       }
 
-        // 방을 나간 상태(is_buyer_left=true, is_seller_left=true)를 제외하고 가져옵니다.
-        const { data, error } = await supabase
-          .from("chat_rooms")
-          .select(`
+      // 내가 구매자거나 판매자인 방을 모두 가져옴
+      const { data, error } = await supabase
+        .from("chat_rooms")
+        .select(`
+          id,
+          seller_id,
+          buyer_id,
+          is_seller_left,
+          is_buyer_left,
+          created_at,
+          item:items (
             id,
-            seller_id,
-            buyer_id,
-            created_at,
-            item:items (
-              id,
-              title,
-              image_url
-            )
-          `)
-          .or(`and(buyer_id.eq.${user.id},is_buyer_left.eq.false),and(seller_id.eq.${user.id},is_seller_left.eq.false)`)
-          .order("created_at", { ascending: false });
+            title,
+            image_url
+          )
+        `)
+        .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`)
+        .order("created_at", { ascending: false });
 
       if (error) {
         console.error("채팅방을 가져오는 중 에러 발생:", error);
       } else if (data) {
-        setRooms(data as unknown as ChatRoom[]);
+        // Javascript 단에서 확실하게 필터링 (PostgREST 문법 오류 원천 차단)
+        const activeRooms = data.filter((room: any) => {
+          const isSeller = room.seller_id === user.id;
+          const isBuyer = room.buyer_id === user.id;
+          if (isSeller && room.is_seller_left) return false;
+          if (isBuyer && room.is_buyer_left) return false;
+          return true;
+        });
+        setRooms(activeRooms as unknown as ChatRoom[]);
       }
       setIsLoading(false);
     };
