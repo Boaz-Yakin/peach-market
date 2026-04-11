@@ -54,7 +54,7 @@ export default function ChatListPage() {
       if (error) {
         console.error("채팅방을 가져오는 중 에러 발생:", error);
       } else if (data) {
-        // Javascript 단에서 확실하게 필터링 (PostgREST 문법 오류 원천 차단)
+        // Javascript 단에서 확실하게 필터링
         const activeRooms = data.filter((room: any) => {
           const isSeller = room.seller_id === user.id;
           const isBuyer = room.buyer_id === user.id;
@@ -62,12 +62,30 @@ export default function ChatListPage() {
           if (isBuyer && room.is_buyer_left) return false;
           return true;
         });
+        
+        // 채팅방 목록 정렬 및 상태 업데이트
         setRooms(activeRooms as unknown as ChatRoom[]);
       }
       setIsLoading(false);
     };
 
     fetchRooms();
+
+    // 앱 화면으로 다시 돌아올 때마다 갱신 (빠른 반응성)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") fetchRooms();
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // 상대방이 새 채팅을 걸었을 때 자동으로 뜨도록 5초마다 자동 갱신 (폴링)
+    const pollInterval = setInterval(() => {
+      fetchRooms();
+    }, 5000);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      clearInterval(pollInterval);
+    };
   }, [supabase, router]);
 
   if (isLoading) return <div className="p-10 text-center">채팅 목록 불러오는 중... 🍑</div>;
