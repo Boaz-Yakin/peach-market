@@ -43,6 +43,7 @@ export default function ChatRoomPage() {
 
   // 환경변수 체크용
   const hasEnv = !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  const projectUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.split(".")[0].split("//")[1] || "알 수 없음";
 
   // 1. 방 정보 및 사용자 초기화
   useEffect(() => {
@@ -81,7 +82,7 @@ export default function ChatRoomPage() {
           .order("created_at", { ascending: false });
 
         if (msgs) setMessages(msgs);
-        // 여기서 더 이상 setDebugStatus를 호출하지 않음 (실시간 구독 effect에게 양보)
+        setDebugStatus("구독 준비됨");
       } catch (err: any) {
         setDebugStatus(`초기화 실패: ${err.message}`);
       }
@@ -90,28 +91,29 @@ export default function ChatRoomPage() {
     initData();
   }, [roomId, supabase, router, hasEnv]);
 
-  // 2. 실시간 구독 (표준 패턴으로 회귀)
+  // 2. 실시간 구독 (모든 필터를 빼고 '날것'으로 받기)
   useEffect(() => {
     if (!roomId || !currentUser) return;
 
-    setDebugStatus("실시간 채널 접속 시도...");
+    setDebugStatus("채널 무필터 접속...");
     
     const channel = supabase
-      .channel(`room_main_${roomId}`) // 고정된 채널명
+      .channel(`chat_v2_${roomId}`) 
       .on(
         "postgres_changes",
         { 
           event: "INSERT", 
           schema: "public", 
-          table: "messages",
-          filter: `room_id=eq.${roomId}` // 다시 필터 적용 (표준)
+          table: "messages"
+          // 필터를 완전히 제거 (CHANNEL_ERROR 차단용)
         },
         (payload) => {
-          console.log("메시지 인입:", payload);
-          const incoming = payload.new as Message;
+          const incoming = payload.new as Message & { room_id: string };
+          
+          // 수동으로 내 방 메시지인지 체크
+          if (incoming.room_id !== roomId) return;
 
           setMessages((prev) => {
-            // 중복 방지 (이미 있거나 내 메시지인 경우)
             if (prev.some(m => m.id === incoming.id)) return prev;
             if (incoming.sender_id === currentUserRef.current?.id) return prev;
             return [incoming, ...prev];
@@ -119,11 +121,10 @@ export default function ChatRoomPage() {
         }
       )
       .subscribe((status, err) => {
-        setDebugStatus(`상태: ${status}`);
+        setDebugStatus(`${status}`);
         setIsConnected(status === "SUBSCRIBED");
         if (err) {
-          console.error("구독 에러:", err);
-          setDebugStatus(`에러: ${err.message}`);
+          setDebugStatus(`오류: ${err.message}`);
         }
       });
 
@@ -185,7 +186,9 @@ export default function ChatRoomPage() {
               </h1>
               <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500 animate-pulse" : "bg-gray-300"}`} />
             </div>
-            <span className="text-[10px] text-gray-400 font-medium">{debugStatus}</span>
+            <span className="text-[10px] text-gray-400 font-medium">
+              {debugStatus} | {projectUrl} | {currentUser?.id?.slice(0, 5)}
+            </span>
           </div>
         <div className="w-8" />
       </header>
