@@ -228,9 +228,9 @@ export default function ChatRoomPage() {
   if (!roomInfo) return <div className="p-10 text-center">채팅방을 불러오는 중... 🍑</div>;
 
   return (
-    <div className="flex flex-col h-[100dvh] bg-white">
+    <div className="fixed inset-0 flex flex-col bg-white overflow-hidden">
       {/* 헤더 */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 flex items-center px-4 h-14 shadow-sm">
+      <header className="flex-shrink-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-4 h-14 shadow-sm">
         <button onClick={() => router.back()} className="p-2 -ml-2 text-gray-800">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <polyline points="15 18 9 12 15 6"></polyline>
@@ -238,14 +238,11 @@ export default function ChatRoomPage() {
         </button>
           <div className="flex flex-col items-center justify-center">
             <div className="flex items-center gap-1.5">
-              <h1 className="font-bold text-[16px] text-gray-900 truncate">
+              <h1 className="font-bold text-[17px] text-gray-900 truncate">
                 {currentUser?.id === roomInfo.seller_id ? "구매자님" : "판매자님"}
               </h1>
               <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500 animate-pulse" : "bg-gray-300"}`} />
             </div>
-            <span className="text-[10px] text-gray-400 font-medium">
-              {debugStatus} | {projectUrl} | {currentUser?.id?.slice(0, 5)}
-            </span>
           </div>
         <div className="w-8 flex items-center justify-end">
           <button onClick={() => setIsMenuOpen(true)} className="p-2 -mr-2 text-gray-800 transition-opacity hover:opacity-70">
@@ -258,10 +255,10 @@ export default function ChatRoomPage() {
         </div>
       </header>
 
-      {/* 상품 정보 바 (헤더 아래 고정) */}
+      {/* 상품 정보 바 (헤더 아래 고정, flex flow 내 배치) */}
       <Link 
         href={`/item/${roomInfo.item.id}`}
-        className="fixed top-14 left-0 right-0 bg-white/90 backdrop-blur-sm px-4 py-2 border-b border-gray-100 flex items-center gap-3 z-40"
+        className="flex-shrink-0 bg-white/90 backdrop-blur-sm px-4 py-2 border-b border-gray-100 flex items-center gap-3 z-40"
       >
         <div className="relative w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-gray-50 border border-gray-100">
           <Image src={roomInfo.item.image_url} alt={roomInfo.item.title} fill className="object-cover" />
@@ -274,7 +271,7 @@ export default function ChatRoomPage() {
       </Link>
 
       {/* 메시지 리스트 - flex-col-reverse (카톡 스타일 완벽 구현) */}
-      <main className="flex-1 overflow-y-auto px-4 pt-32 pb-6 flex flex-col-reverse space-y-4 space-y-reverse">
+      <main className="flex-1 overflow-y-auto px-4 pt-4 pb-6 flex flex-col-reverse space-y-4 space-y-reverse overscroll-contain">
         {messages.map((msg) => {
           const isMe = msg.sender_id === currentUser?.id;
           return (
@@ -296,8 +293,8 @@ export default function ChatRoomPage() {
         })}
       </main>
 
-      {/* 입력창 - 최하단 고정 및 애니메이션 */}
-      <footer className="bg-white border-t border-gray-100 p-3 pb-safe">
+      {/* 입력창 - flex flow 최하단 */}
+      <footer className="flex-shrink-0 bg-white border-t border-gray-100 p-3 pb-safe z-50">
         <form onSubmit={sendMessage} className="flex items-center gap-2 max-w-2xl mx-auto">
           <div className="p-2">
              <span className="text-xl animate-peach-pulse inline-block">🍑</span>
