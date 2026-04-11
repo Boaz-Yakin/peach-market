@@ -274,7 +274,7 @@ export default function ChatRoomPage() {
               onChange={(e) => setNewMessage(e.target.value)}
             />
             {!newMessage && (
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-peach-dark opacity-40 pointer-events-none animate-bounce">
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none animate-bounce text-lg opacity-90 drop-shadow-sm">
                 ✨
               </div>
             )}
