@@ -228,9 +228,9 @@ export default function ChatRoomPage() {
   if (!roomInfo) return <div className="p-10 text-center">채팅방을 불러오는 중... 🍑</div>;
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-white overflow-hidden">
+    <div className="flex flex-col min-h-[100dvh] bg-white">
       {/* 헤더 */}
-      <header className="flex-shrink-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-4 h-14 shadow-sm">
+      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-4 h-14 shadow-sm">
         <button onClick={() => router.back()} className="p-2 -ml-2 text-gray-800">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <polyline points="15 18 9 12 15 6"></polyline>
@@ -255,10 +255,10 @@ export default function ChatRoomPage() {
         </div>
       </header>
 
-      {/* 상품 정보 바 (헤더 아래 고정, flex flow 내 배치) */}
+      {/* 상품 정보 바 (헤더 아래 고정) */}
       <Link 
         href={`/item/${roomInfo.item.id}`}
-        className="flex-shrink-0 bg-white/90 backdrop-blur-sm px-4 py-2 border-b border-gray-100 flex items-center gap-3 z-40"
+        className="sticky top-14 z-40 bg-white/90 backdrop-blur-sm px-4 py-2 border-b border-gray-100 flex items-center gap-3"
       >
         <div className="relative w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-gray-50 border border-gray-100">
           <Image src={roomInfo.item.image_url} alt={roomInfo.item.title} fill className="object-cover" />
@@ -270,8 +270,8 @@ export default function ChatRoomPage() {
         <div className="text-[11px] font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">거래중</div>
       </Link>
 
-      {/* 메시지 리스트 - flex-col-reverse (카톡 스타일 완벽 구현) */}
-      <main className="flex-1 overflow-y-auto px-4 pt-4 pb-6 flex flex-col-reverse space-y-4 space-y-reverse overscroll-contain">
+      {/* 메시지 리스트 - 네이티브 스크롤 & flex-col-reverse */}
+      <main className="flex-1 flex flex-col-reverse px-4 py-4 space-y-4 space-y-reverse">
         {messages.map((msg) => {
           const isMe = msg.sender_id === currentUser?.id;
           return (
@@ -293,8 +293,8 @@ export default function ChatRoomPage() {
         })}
       </main>
 
-      {/* 입력창 - flex flow 최하단 */}
-      <footer className="flex-shrink-0 bg-white border-t border-gray-100 p-3 pb-safe z-50">
+      {/* 입력창 - 화면 하단 스티키 고정 */}
+      <footer className="sticky bottom-0 z-50 bg-white border-t border-gray-100 p-3 pb-safe">
         <form onSubmit={sendMessage} className="flex items-center gap-2 max-w-2xl mx-auto">
           <div className="p-2">
              <span className="text-xl animate-peach-pulse inline-block">🍑</span>
