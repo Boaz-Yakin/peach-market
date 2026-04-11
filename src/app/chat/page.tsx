@@ -36,12 +36,7 @@ export default function ChatListPage() {
       const { data, error } = await supabase
         .from("chat_rooms")
         .select(`
-          id,
-          seller_id,
-          buyer_id,
-          is_seller_left,
-          is_buyer_left,
-          created_at,
+          *,
           item:items (
             id,
             title,
