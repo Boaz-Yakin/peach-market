@@ -46,8 +46,18 @@ export default async function ItemDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  // 작성자 여부 확인
+  // 작성자 및 판매자 정보 가져오기
   const isOwner = user && item.user_id === user.id;
+
+  const { data: sellerProfile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', item.user_id)
+    .single();
+
+  const sellerName = sellerProfile?.display_name || "피치마켓 사용자";
+  const sellerBrix = sellerProfile?.peach_brix || 36.5;
+  const sellerAvatar = sellerProfile?.avatar_url;
 
   return (
     <div className="flex flex-col min-h-[100dvh] bg-white">
@@ -85,10 +95,15 @@ export default async function ItemDetailPage({ params }: PageProps) {
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
             <div className="w-11 h-11 rounded-full bg-gradient-to-br from-peach to-peach-dark flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden ring-2 ring-white">
-               <span className="text-white font-bold text-[18px]">🍑</span>
+               {sellerAvatar ? (
+                 // eslint-disable-next-line @next/next/no-img-element
+                 <img src={sellerAvatar} alt="Seller" className="w-full h-full object-cover" />
+               ) : (
+                 <span className="text-white font-bold text-[18px]">🍑</span>
+               )}
             </div>
             <div>
-              <p className="text-[15px] font-bold text-gray-900 leading-tight">피치마켓 사용자 {isOwner && "(나)"}</p>
+              <p className="text-[15px] font-bold text-gray-900 leading-tight">{sellerName} {isOwner && "(나)"}</p>
               <p className="text-[12px] text-gray-500 mt-0.5">{item.location}</p>
             </div>
           </div>
@@ -96,11 +111,11 @@ export default async function ItemDetailPage({ params }: PageProps) {
           {/* Seller Temperature / Brix */}
           <div className="flex flex-col items-end">
             <div className="flex items-center gap-1.5 mb-1">
-               <span className="text-[14px] font-black text-[#ff6b6b]">36.5%</span>
+               <span className="text-[14px] font-black text-[#ff6b6b]">{sellerBrix}%</span>
                <span className="text-[16px] leading-none">🍑</span>
             </div>
             <div className="w-24 h-1 bg-gray-100 rounded-full overflow-hidden">
-               <div className="h-full bg-gradient-to-r from-orange-300 to-peach-dark w-[36.5%]"></div>
+               <div className="h-full bg-gradient-to-r from-orange-300 to-peach-dark" style={{ width: `${sellerBrix}%` }}></div>
             </div>
           </div>
         </div>

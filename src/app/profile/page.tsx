@@ -41,9 +41,23 @@ export default async function ProfilePage() {
       .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`);
     chatCount = cCount || 0;
 
-    // 4. 피치 당도 가져오기 (DB에 아직 없으면 기본값)
-    // const { data: profile } = await supabase.from('profiles').select('peach_brix').eq('id', user.id).single();
-    // if (profile) userBrix = profile.peach_brix;
+    // 4. 피치 당도 및 프로필 정보 가져오기
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+    
+    if (profile) {
+      userBrix = profile.peach_brix;
+      // 프로필 정보를 metadata 대신 테이블 정보로 덮어쓰기
+      user.user_metadata = {
+        ...user.user_metadata,
+        display_name: profile.display_name,
+        avatar_url: profile.avatar_url,
+        city: profile.city
+      };
+    }
   }
 
   return (
@@ -52,11 +66,11 @@ export default async function ProfilePage() {
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-5 py-4">
         <h1 className="text-[20px] font-bold text-gray-900">마이 피치</h1>
         <div className="flex items-center gap-3">
-          <button className="text-gray-400 p-2 hover:bg-gray-50 rounded-full transition-all">
+          <Link href="/profile/edit" className="text-gray-400 p-2 hover:bg-gray-50 rounded-full transition-all">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>
             </svg>
-          </button>
+          </Link>
         </div>
       </header>
 
@@ -81,9 +95,9 @@ export default async function ProfilePage() {
           
           <div className="flex-1">
             <h2 className="text-[20px] font-bold text-gray-900 leading-tight">
-              {user?.user_metadata?.full_name || user?.user_metadata?.name || "사용자"}
+              {user?.user_metadata?.display_name || user?.user_metadata?.full_name || user?.user_metadata?.name || "사용자"}
             </h2>
-            <p className="text-[13px] text-gray-400 font-medium">애틀란타 • 피치마켓 1기</p>
+            <p className="text-[13px] text-gray-400 font-medium">{user?.user_metadata?.city || "애틀란타"} • 피치마켓 1기</p>
             <div className="mt-2.5">
                <AuthButton user={user} />
             </div>
