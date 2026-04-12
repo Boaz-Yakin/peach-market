@@ -18,9 +18,10 @@ function getTimeAgo(dateString: string) {
 
 export default async function CommunityPage({ searchParams }: { searchParams: Promise<{ category?: string }> }) {
   const { category = "전체" } = await searchParams;
+  
+  // DB 테이블(posts)이 아직 준비되지 않아 쿼리를 잠시 비활성화합니다.
+  /*
   const supabase = await createClient();
-
-  // 1. 커뮤니티 게시글 가져오기 (테이블명: posts 가정)
   let query = supabase
     .from("posts")
     .select("*, profiles(*)")
@@ -29,8 +30,9 @@ export default async function CommunityPage({ searchParams }: { searchParams: Pr
   if (category !== "전체") {
     query = query.eq("category", category);
   }
-
   const { data: posts } = await query;
+  */
+  const posts: any[] = []; // 임시 빈 배열
 
   const categories = ["전체", "맛집", "동네생활", "분실물", "취미/모임"];
 
@@ -41,85 +43,57 @@ export default async function CommunityPage({ searchParams }: { searchParams: Pr
       </Suspense>
 
       {/* Community Categories Bar */}
-      <div className="sticky top-14 z-30 glass scrollbar-hide overflow-x-auto">
+      <div className="sticky top-14 z-30 glass scrollbar-hide overflow-x-auto opacity-50 pointer-events-none">
         <div className="flex px-4 py-3 gap-2 min-w-max">
           {categories.map((cat) => (
-            <Link
+            <div
               key={cat}
-              href={`/community?category=${cat}`}
               className={`px-4 py-1.5 rounded-full text-[13px] font-bold transition-all ${
                 category === cat
                   ? "bg-primary text-white shadow-md shadow-primary/20"
-                  : "bg-surface-container-high text-foreground/50 hover:bg-surface-container-highest"
+                  : "bg-surface-container-high text-foreground/50"
               }`}
             >
               {cat}
-            </Link>
+            </div>
           ))}
         </div>
       </div>
 
-      {/* Editorial Community Feed */}
-      <div className="px-4 py-4 space-y-4 pb-24">
-        {(!posts || posts.length === 0) ? (
-          <div className="bg-surface-container-lowest rounded-3xl p-10 text-center shadow-sm">
-            <div className="text-4xl mb-4">💬</div>
-            <h3 className="text-[18px] font-black text-foreground font-display mb-2">피치 광장이 조용하네요</h3>
-            <p className="text-[14px] text-foreground/40 font-medium">우리 동네의 첫 소식을 전해보세요!</p>
-          </div>
-        ) : (
-          posts.map((post) => (
-            <Link
-              key={post.id}
-              href={`/community/${post.id}`}
-              className="block bg-surface-container-lowest rounded-3xl p-5 shadow-sm hover:shadow-md transition-all active:scale-[0.98] group"
-            >
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-[10px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
-                  {post.category}
-                </span>
-                <span className="text-[12px] text-foreground/30 font-medium tracking-tight">
-                  {post.profiles?.display_name || "익명"} • {getTimeAgo(post.created_at)}
-                </span>
-              </div>
-              
-              <h4 className="text-[18px] font-black text-foreground leading-snug mb-2 font-display group-hover:text-primary transition-colors">
-                {post.title}
-              </h4>
-              <p className="text-[14px] text-foreground/60 leading-relaxed line-clamp-2 mb-4 font-medium">
-                {post.content}
-              </p>
-
-              {post.image_url && (
-                <div className="w-full h-48 relative rounded-2xl overflow-hidden mb-4 bg-surface-container-high">
-                  <Image src={post.image_url} alt="Post" fill className="object-cover group-hover:scale-105 transition-transform duration-700" />
-                </div>
-              )}
-
-              <div className="flex items-center gap-4 pt-2 border-t border-surface-container-low">
-                <div className="flex items-center gap-1.5 text-foreground/40 text-[12px] font-bold">
-                  <span>🚀</span> 0
-                </div>
-                <div className="flex items-center gap-1.5 text-foreground/40 text-[12px] font-bold">
-                  <span>💬</span> 0
-                </div>
-              </div>
-            </Link>
-          ))
-        )}
+      {/* Under Construction State */}
+      <div className="px-6 py-20 flex flex-col items-center justify-center text-center">
+        <div className="w-24 h-24 bg-primary/10 rounded-full flex items-center justify-center mb-8 animate-pulse text-5xl">
+          🏗️
+        </div>
+        <h2 className="text-[28px] font-black text-foreground font-display leading-tight mb-4">
+          피치 광장은 지금<br />공사 중입니다! 🍑
+        </h2>
+        <p className="text-[16px] text-foreground/50 font-medium leading-relaxed max-w-[280px]">
+          이웃들과 더 즐겁게 소통할 수 있는<br />
+          공간을 열심히 만들고 있어요.<br />
+          조금만 더 기다려 주세요!
+        </p>
+        
+        <div className="mt-12 p-6 bg-surface-container-high/50 rounded-3xl border border-outline-variant/30 w-full max-w-sm">
+           <p className="text-[13px] font-bold text-primary mb-2 uppercase tracking-widest pl-1">Coming Soon</p>
+           <ul className="text-left space-y-2 text-[14px] text-foreground/70 font-medium">
+             <li>🏠 우리 동네 소소한 일상 공유</li>
+             <li>🍜 숨은 맛집 및 생활 꿀팁</li>
+             <li>🏸 취미 생활을 함께할 이웃 찾기</li>
+           </ul>
+        </div>
       </div>
 
-      {/* Community Write FAB */}
+      {/* Community Write FAB - Disabled or Hidden */}
+      {/* 
       <div className="fixed bottom-20 right-0 left-0 max-w-md mx-auto pointer-events-none z-40">
         <div className="absolute right-4 bottom-0 pointer-events-auto">
           <Link href="/community/write" className="flex items-center gap-2 bg-primary text-white px-6 py-4 rounded-full shadow-2xl shadow-primary/40 btn-soft">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
-            </svg>
-            <span className="font-black font-display pr-1">글쓰기</span>
+            ...
           </Link>
         </div>
       </div>
+      */}
     </main>
   );
 }
