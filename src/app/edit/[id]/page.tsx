@@ -100,9 +100,12 @@ export default function EditPage() {
 
       // 1. 새로운 사진이 선택되었다면 업로드
       if (selectedFile) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error("로그인이 필요합니다.");
+
         const fileExt = selectedFile.name.split(".").pop();
-        const fileName = `${Math.random()}.${fileExt}`;
-        const filePath = `${fileName}`;
+        const fileName = `${Date.now()}.${fileExt}`;
+        const filePath = `${user.id}/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
           .from("item-images")

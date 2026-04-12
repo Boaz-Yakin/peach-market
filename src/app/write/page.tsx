@@ -75,8 +75,8 @@ export default function WritePage() {
       let finalImageUrl = "";
       if (selectedFile) {
         const fileExt = selectedFile.name.split('.').pop();
-        const fileName = `${userId || 'anon'}-${Date.now()}.${fileExt}`;
-        const filePath = `${fileName}`;
+        const fileName = `${Date.now()}.${fileExt}`;
+        const filePath = `${userId}/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
           .from('item-images')
