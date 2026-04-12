@@ -16,14 +16,19 @@ export default function BottomNav() {
 
   useEffect(() => {
     let isMounted = true;
+    let channel: any = null;
     
     const initializeNotifications = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.log("No user found for notifications");
+        return;
+      }
       currentUserIdRef.current = user.id;
 
       // 1. 내 활성 채팅방 ID 목록 가져오기
-      const fetchRooms = async () => {
+      const fetchRoomsAndUnread = async () => {
+        console.log("Fetching rooms for user:", user.id);
         const { data: rooms } = await supabase
           .from('chat_rooms')
           .select('id, seller_id, buyer_id, is_seller_left, is_buyer_left')
@@ -37,101 +42,65 @@ export default function BottomNav() {
               return true;
             })
             .map(r => r.id);
+          
+          console.log("Active Room IDs:", activeRoomIdsRef.current);
+
+          if (activeRoomIdsRef.current.length > 0) {
+            const { data: unreadMsgs, error } = await supabase
+              .from('messages')
+              .select('id')
+              .in('room_id', activeRoomIdsRef.current)
+              .neq('sender_id', user.id)
+              .eq('is_read', false);
+            
+            if (unreadMsgs && isMounted) {
+              console.log("Unread Messages count:", unreadMsgs.length);
+              setUnreadCount(unreadMsgs.length);
+            }
+            if (error) console.error("Unread fetch error:", error);
+          } else {
+            if (isMounted) setUnreadCount(0);
+          }
         }
       };
 
-      await fetchRooms();
+      await fetchRoomsAndUnread();
 
-      // 2. 초기 안읽은 메시지 개수 가져오기
-      const fetchUnreadCount = async () => {
-        if (activeRoomIdsRef.current.length === 0) {
-          if (isMounted) setUnreadCount(0);
-          return;
-        }
-
-        const { data: unreadMsgs } = await supabase
-          .from('messages')
-          .select('id')
-          .in('room_id', activeRoomIdsRef.current)
-          .neq('sender_id', user.id)
-          .eq('is_read', false);
-        
-        if (unreadMsgs && isMounted) {
-          setUnreadCount(unreadMsgs.length);
-        }
-      };
-
-      await fetchUnreadCount();
-
-      // 3. 실시간 구독 설정 (Realtime)
-      const channel = supabase
+      // 2. 실시간 구독 설정
+      channel = supabase
         .channel('global_notifications')
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'messages' },
           (payload) => {
-            if (!isMounted) return;
-
-            // 새 메시지 수신 (INSERT)
-            if (payload.eventType === 'INSERT') {
-              const newMessage = payload.new;
-              
-              // 내 방의 메시지이고, 내가 보낸 게 아닐 때
-              if (activeRoomIdsRef.current.includes(newMessage.room_id) && newMessage.sender_id !== user.id) {
-                setUnreadCount(prev => prev + 1);
-                
-                // 현재 채팅방 목록 페이지가 아니거나 다른 채팅방에 있을 때만 토스트 노출
-                if (!pathname.includes(`/chat/${newMessage.room_id}`)) {
-                  setToastMessage("새로운 메시지가 도착했습니다! 🍑");
-                  setTimeout(() => { if (isMounted) setToastMessage(null); }, 3000);
-                }
-              }
-            }
-            
-            // 읽음 처리 업데이트 (UPDATE)
-            if (payload.eventType === 'UPDATE') {
-              const oldMsg = payload.old;
-              const newMsg = payload.new;
-              
-              // 안 읽음 -> 읽음으로 변경되었고, 내가 수신자였던 메시지인 경우
-              if (!oldMsg.is_read && newMsg.is_read && newMsg.sender_id !== user.id) {
-                setUnreadCount(prev => Math.max(0, prev - 1));
-              }
-            }
+            console.log("Realtime message event:", payload.eventType);
+            fetchRoomsAndUnread(); // 실시간 이벤트 시 전체 다시 가져와서 정확성 보장
           }
         )
-        // 새로운 채팅방 생성 감지 (방 목록 업데이트)
         .on(
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'chat_rooms' },
-          (payload) => {
-            const newRoom = payload.new;
-            if (newRoom.buyer_id === user.id || newRoom.seller_id === user.id) {
-              if (!activeRoomIdsRef.current.includes(newRoom.id)) {
-                activeRoomIdsRef.current.push(newRoom.id);
-              }
-            }
+          () => {
+            console.log("Realtime room event");
+            fetchRoomsAndUnread();
           }
         )
-        .subscribe();
-
-      // 보안망: 1분마다 한 번씩 전체 동기화 (네트워크 끊김 대비)
-      const safetyCheck = setInterval(() => {
-        fetchRooms();
-        fetchUnreadCount();
-      }, 60000);
-
-      return () => {
-        supabase.removeChannel(channel);
-        clearInterval(safetyCheck);
-      };
+        .subscribe((status) => {
+          console.log("Subscription status:", status);
+        });
     };
 
-    const cleanup = initializeNotifications();
+    initializeNotifications();
+
+    // 30초마다 한 번씩 강제 동기화 (보안망)
+    const safetyCheck = setInterval(() => {
+      initializeNotifications();
+    }, 30000);
 
     return () => {
       isMounted = false;
-      cleanup.then(fn => fn && fn());
+      if (channel) supabase.removeChannel(channel);
+      clearInterval(safetyCheck);
     };
   }, [supabase, pathname]);
 
