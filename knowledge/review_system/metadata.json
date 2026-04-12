@@ -1,0 +1,11 @@
+{
+  "title": "Peach Brix 2.0: Trust System & Review Duplication Prevention",
+  "summary": "Implement mutual evaluation between buyers and sellers to calculate trust score (Peach Brix). Includes a mechanism using a 'reviews' table to prevent multiple submissions for the same item.",
+  "category": "Architecture",
+  "tags": ["supabase", "nextjs", "trust-system", "security", "rls"],
+  "created_at": "2026-04-12T17:11:00Z",
+  "references": [
+    "src/app/review/[id]/ReviewForm.tsx",
+    "src/app/item/[id]/page.tsx"
+  ]
+}
