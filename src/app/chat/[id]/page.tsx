@@ -44,6 +44,7 @@ export default function ChatRoomPage() {
   // 채팅방 메뉴 및 기능 상태
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
+  const [isAttachmentMenuOpen, setIsAttachmentMenuOpen] = useState(false);
 
   // 환경변수 체크용
   const hasEnv = !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
@@ -367,18 +368,12 @@ export default function ChatRoomPage() {
       </main>
 
       {/* 입력창 */}
-      <footer className="sticky bottom-0 z-50 bg-surface-container-low border-t border-surface-container-high p-4 pb-safe shadow-[0_-10px_30px_rgba(0,0,0,0.03)]">
+      <footer className="sticky bottom-0 z-50 bg-surface-container-low border-t border-surface-container-high p-4 pb-safe shadow-[0_-10px_30px_rgba(0,0,0,0.03)] transition-all">
         <form onSubmit={sendMessage} className="flex items-center gap-3 max-w-2xl mx-auto">
           <button 
             type="button"
-            onClick={() => {
-              const loc = prompt("공유할 장소 이름을 입력하세요 (예: H mart Duluth)");
-              if (loc) {
-                setNewMessage(`[LOCATION] ${loc}`);
-                // 이후 자동으로 전송되도록 유도하거나 직접 전송 함수 호출 가능
-              }
-            }}
-            className="w-11 h-11 flex-shrink-0 bg-surface-container-highest rounded-full flex items-center justify-center text-foreground/40 hover:text-primary transition-all btn-soft"
+            onClick={() => setIsAttachmentMenuOpen(!isAttachmentMenuOpen)}
+            className={`w-11 h-11 flex-shrink-0 rounded-full flex items-center justify-center transition-all btn-soft ${isAttachmentMenuOpen ? "bg-primary text-white rotate-45" : "bg-surface-container-highest text-foreground/40 hover:text-primary"}`}
           >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -408,6 +403,43 @@ export default function ChatRoomPage() {
             </svg>
           </button>
         </form>
+
+        {/* 첨부 메뉴 패널 */}
+        <div className={`overflow-hidden transition-all duration-300 max-w-2xl mx-auto ${isAttachmentMenuOpen ? "max-h-40 opacity-100 mt-4" : "max-h-0 opacity-0 mt-0"}`}>
+          <div className="flex items-center gap-6 pt-2 pb-2 px-2">
+            <button 
+              type="button"
+              onClick={() => {
+                setIsAttachmentMenuOpen(false);
+                setTimeout(() => {
+                  const loc = prompt("공유할 장소 이름을 입력하세요 (예: H mart Duluth)");
+                  if (loc) {
+                    setNewMessage(`[LOCATION] ${loc}`);
+                  }
+                }, 300);
+              }}
+              className="flex flex-col items-center gap-2 group"
+            >
+              <div className="w-14 h-14 bg-surface-container-highest group-active:scale-95 rounded-full flex items-center justify-center text-2xl shadow-sm transition-transform">
+                📍
+              </div>
+              <span className="text-[12px] font-bold text-foreground/70 tracking-tight">장소 공유</span>
+            </button>
+            <button 
+              type="button"
+              onClick={() => {
+                alert("사진 전송 기능은 준비 중입니다! 🙇‍♂️");
+                setIsAttachmentMenuOpen(false);
+              }}
+              className="flex flex-col items-center gap-2 group"
+            >
+              <div className="w-14 h-14 bg-surface-container-highest group-active:scale-95 rounded-full flex items-center justify-center text-2xl shadow-sm transition-transform">
+                📷
+              </div>
+              <span className="text-[12px] font-bold text-foreground/70 tracking-tight">사진 전송</span>
+            </button>
+          </div>
+        </div>
       </footer>
 
       {/* 옵션 메뉴 (Bottom Sheet) */}
