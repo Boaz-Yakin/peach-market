@@ -30,10 +30,12 @@ export default function NotificationsPage() {
         return;
       }
 
-      // Fetch Notifications
+      // Fetch Notifications (Only unread ones)
       const { data: notifs } = await supabase
         .from("notifications")
         .select("*")
+        .eq("user_id", user.id)
+        .eq("is_read", false)
         .order("created_at", { ascending: false })
         .limit(20);
       setNotifications(notifs || []);
