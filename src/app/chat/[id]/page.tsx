@@ -330,13 +330,15 @@ export default function ChatRoomPage() {
                       <span className="text-xl">📍</span>
                       <span className="font-black font-display">약속 장소 공유</span>
                     </div>
-                    <div className="w-full h-32 bg-surface-container-high rounded-xl relative overflow-hidden">
-                       <div className="absolute inset-0 flex items-center justify-center bg-blue-50/50">
-                         <div className="text-center">
-                            <span className="text-3xl mb-2 inline-block">🗺️</span>
-                            <p className="text-[11px] text-blue-600 font-bold px-3">장소 지도가 포함된 메시지입니다.</p>
-                         </div>
-                       </div>
+                    <div className="w-full h-40 bg-surface-container-high rounded-xl relative overflow-hidden">
+                      <iframe 
+                        width="100%" 
+                        height="100%" 
+                        style={{ border: 0 }} 
+                        loading="lazy" 
+                        allowFullScreen 
+                        src={`https://maps.google.com/maps?q=${encodeURIComponent(msg.content.replace("[LOCATION]", "").trim())}&t=m&z=15&output=embed`}
+                      ></iframe>
                     </div>
                     <p className="text-[13px] opacity-90 leading-snug">{msg.content.replace("[LOCATION]", "").trim()}</p>
                   </div>
