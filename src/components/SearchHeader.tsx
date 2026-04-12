@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "../lib/supabaseBrowser";
 
@@ -12,18 +12,12 @@ export default function SearchHeader() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [query, setQuery] = useState(searchParams.get("q") || "");
   const [hasUnread, setHasUnread] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     setQuery(searchParams.get("q") || "");
   }, [searchParams]);
 
   useEffect(() => {
-    // 1. 알림음 준비
-    if (typeof window !== "undefined") {
-      audioRef.current = new Audio("https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3");
-    }
-
     async function setupRealtime() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -44,12 +38,7 @@ export default function SearchHeader() {
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
           (payload) => {
-            console.log('New notification!', payload);
             setHasUnread(true);
-            // 딩동~ 소리 재생
-            if (audioRef.current) {
-              audioRef.current.play().catch(e => console.log("Audio play failed:", e));
-            }
           }
         )
         .subscribe();
