@@ -54,6 +54,13 @@ export default function NotificationsPage() {
         .order("created_at", { ascending: false });
       setKeywords(kws || []);
 
+      // Mark as read
+      await supabase
+        .from("notifications")
+        .update({ is_read: true })
+        .eq("user_id", user.id)
+        .eq("is_read", false);
+
       setLoading(false);
     }
     fetchData();

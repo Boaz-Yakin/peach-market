@@ -1,18 +1,66 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { createClient } from "../lib/supabaseBrowser";
 
 export default function SearchHeader() {
   const router = useRouter();
+  const supabase = createClient();
   const searchParams = useSearchParams();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [query, setQuery] = useState(searchParams.get("q") || "");
+  const [hasUnread, setHasUnread] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     setQuery(searchParams.get("q") || "");
   }, [searchParams]);
+
+  useEffect(() => {
+    // 1. 알림음 준비
+    if (typeof window !== "undefined") {
+      audioRef.current = new Audio("https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3");
+    }
+
+    async function setupRealtime() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // 초기 읽지 않은 알림 확인
+      const { count } = await supabase
+        .from("notifications")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("is_read", false);
+      
+      if (count && count > 0) setHasUnread(true);
+
+      // 실시간 구독
+      const channel = supabase
+        .channel(`public:notifications:user_id=eq.${user.id}`)
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+          (payload) => {
+            console.log('New notification!', payload);
+            setHasUnread(true);
+            // 딩동~ 소리 재생
+            if (audioRef.current) {
+              audioRef.current.play().catch(e => console.log("Audio play failed:", e));
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+
+    setupRealtime();
+  }, [supabase]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +116,12 @@ export default function SearchHeader() {
             <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
             <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
           </svg>
-          <span className="absolute top-2 right-2 w-2 h-2 bg-[#ff6b6b] rounded-full border-2 border-white"></span>
+          {hasUnread && (
+            <>
+              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-[#ff6b6b] rounded-full animate-ping opacity-75"></span>
+              <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-[#ff6b6b] rounded-full border border-white"></span>
+            </>
+          )}
         </Link>
       </div>
     </header>
