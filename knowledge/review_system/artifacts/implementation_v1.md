@@ -1,4 +1,12 @@
+---
+title: "Peach Brix 2.0: Trust System & Review Duplication Prevention"
+category: "Architecture"
+tags: [supabase, nextjs, trust-system, security, rls]
+created_at: 2026-04-12
+---
+
 # Peach Brix 2.0 Implementation Guide
+
 
 ## Overview
 The trust system (Peach Brix) is a core feature of Peach Market that encourages good behavior through user reviews. This KI documents the implementation of the evaluation system and the duplication prevention logic.
