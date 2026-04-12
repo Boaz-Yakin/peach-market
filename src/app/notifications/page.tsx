@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "../../../lib/supabaseBrowser";
+import { createClient } from "../../lib/supabaseBrowser";
 
 export default function NotificationsPage() {
   const router = useRouter();
