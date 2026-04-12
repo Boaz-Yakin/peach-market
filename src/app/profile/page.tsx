@@ -97,7 +97,7 @@ export default async function ProfilePage() {
               <div className="flex flex-col">
                 <span className="text-[13px] font-bold text-gray-400">나의 명품 지수</span>
                 <span className="text-[18px] font-black text-gray-900 flex items-center gap-1.5">
-                  피치 당도 {userBrix}°C 🍑
+                  피치 당도 {userBrix}% 🍑
                 </span>
               </div>
               <span className="text-[12px] font-bold text-peach-dark bg-peach-light/30 px-2 py-0.5 rounded-full mb-1">상위 5%</span>
@@ -114,9 +114,9 @@ export default async function ProfilePage() {
             </div>
             
             <div className="flex justify-between mt-2.5 text-[11px] font-bold text-gray-300">
-              <span>0°C</span>
-              <span>첫 온도 36.5°C</span>
-              <span>100°C</span>
+              <span>0%</span>
+              <span>기본 당도 36.5%</span>
+              <span>100%</span>
             </div>
           </div>
         )}

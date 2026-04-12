@@ -96,7 +96,7 @@ export default async function ItemDetailPage({ params }: PageProps) {
           {/* Seller Temperature / Brix */}
           <div className="flex flex-col items-end">
             <div className="flex items-center gap-1.5 mb-1">
-               <span className="text-[14px] font-black text-[#ff6b6b]">36.5°C</span>
+               <span className="text-[14px] font-black text-[#ff6b6b]">36.5%</span>
                <span className="text-[16px] leading-none">🍑</span>
             </div>
             <div className="w-24 h-1 bg-gray-100 rounded-full overflow-hidden">
