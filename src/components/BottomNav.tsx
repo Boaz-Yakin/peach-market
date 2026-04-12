@@ -10,9 +10,7 @@ export default function BottomNav() {
   const supabase = createClient();
   const [unreadCount, setUnreadCount] = useState(0);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const lastLatestMessageId = useRef<string | null>(null);
   const activeRoomIdsRef = useRef<string[]>([]);
-  const currentUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -20,87 +18,80 @@ export default function BottomNav() {
     
     const initializeNotifications = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        console.log("No user found for notifications");
-        return;
-      }
-      currentUserIdRef.current = user.id;
+      if (!user) return;
 
-      // 1. 내 활성 채팅방 ID 목록 가져오기
       const fetchRoomsAndUnread = async () => {
-        console.log("Fetching rooms for user:", user.id);
-        const { data: rooms } = await supabase
-          .from('chat_rooms')
-          .select('id, seller_id, buyer_id, is_seller_left, is_buyer_left')
-          .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`);
-        
-        if (rooms) {
-          activeRoomIdsRef.current = rooms
-            .filter(r => {
-              if (r.seller_id === user.id && r.is_seller_left) return false;
-              if (r.buyer_id === user.id && r.is_buyer_left) return false;
-              return true;
-            })
-            .map(r => r.id);
+        try {
+          // 400 에러 방지를 위해 컬럼을 명시하지 않고 *로 가져옴 (컬럼명 오타/누락 방지)
+          const { data: rooms, error: roomError } = await supabase
+            .from("chat_rooms")
+            .select("*")
+            .or(`buyer_id.eq.${user.id},seller_id.eq.${user.id}`);
           
-          console.log("Active Room IDs:", activeRoomIdsRef.current);
-
-          if (activeRoomIdsRef.current.length > 0) {
-            const { data: unreadMsgs, error } = await supabase
-              .from('messages')
-              .select('id')
-              .in('room_id', activeRoomIdsRef.current)
-              .neq('sender_id', user.id)
-              .eq('is_read', false);
-            
-            if (unreadMsgs && isMounted) {
-              console.log("Unread Messages count:", unreadMsgs.length);
-              setUnreadCount(unreadMsgs.length);
-            }
-            if (error) console.error("Unread fetch error:", error);
-          } else {
-            if (isMounted) setUnreadCount(0);
+          if (roomError) {
+            console.error("Room fetch error:", roomError.message);
+            return;
           }
+
+          if (rooms) {
+            activeRoomIdsRef.current = rooms
+              .filter((r: any) => {
+                if (r.seller_id === user.id && r.is_seller_left === true) return false;
+                if (r.buyer_id === user.id && r.is_buyer_left === true) return false;
+                return true;
+              })
+              .map((r: any) => r.id);
+            
+            if (activeRoomIdsRef.current.length > 0) {
+              const { data: unreadMsgs, error: msgError } = await supabase
+                .from("messages")
+                .select("id")
+                .in("room_id", activeRoomIdsRef.current)
+                .neq("sender_id", user.id)
+                .eq("is_read", false);
+              
+              if (!msgError && unreadMsgs && isMounted) {
+                setUnreadCount(unreadMsgs.length);
+              }
+            } else {
+              if (isMounted) setUnreadCount(0);
+            }
+          }
+        } catch (err) {
+          console.error("Critical fetch error:", err);
         }
       };
 
       await fetchRoomsAndUnread();
 
-      // 2. 실시간 구독 설정
+      // 실시간 구독
       channel = supabase
         .channel('global_notifications')
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'messages' },
-          (payload) => {
-            console.log("Realtime message event:", payload.eventType);
-            fetchRoomsAndUnread(); // 실시간 이벤트 시 전체 다시 가져와서 정확성 보장
+          () => {
+            fetchRoomsAndUnread();
           }
         )
         .on(
           'postgres_changes',
           { event: 'INSERT', schema: 'public', table: 'chat_rooms' },
           () => {
-            console.log("Realtime room event");
             fetchRoomsAndUnread();
           }
         )
-        .subscribe((status) => {
-          console.log("Subscription status:", status);
-        });
+        .subscribe();
     };
 
     initializeNotifications();
 
-    // 30초마다 한 번씩 강제 동기화 (보안망)
-    const safetyCheck = setInterval(() => {
-      initializeNotifications();
-    }, 30000);
+    const interval = setInterval(initializeNotifications, 15000); // 15초마다 자동 갱신 (보안망)
 
     return () => {
       isMounted = false;
+      clearInterval(interval);
       if (channel) supabase.removeChannel(channel);
-      clearInterval(safetyCheck);
     };
   }, [supabase, pathname]);
 
