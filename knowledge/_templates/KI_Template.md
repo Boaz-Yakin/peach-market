@@ -2,6 +2,7 @@
 title: "KI 제목 (예: Peach Brix Trust System Logic)"
 category: "분류 (예: Architecture, Bugfix, Recipe)"
 tags: [tag1, tag2, tag3]
+project: "프로젝트명 (예: peach-market)"
 created_at: YYYY-MM-DD
 ---
 
