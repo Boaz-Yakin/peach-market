@@ -21,11 +21,11 @@ import SearchHeader from "../components/SearchHeader";
 import { createClient } from "../lib/supabaseServer";
 
 interface HomeProps {
-  searchParams: Promise<{ category?: string; q?: string }>;
+  searchParams: Promise<{ category?: string; q?: string; hide_sold?: string }>;
 }
 
 export default async function Home({ searchParams }: HomeProps) {
-  const { category, q } = await searchParams;
+  const { category, q, hide_sold } = await searchParams;
   const supabase = await createClient();
 
   // 검색 및 필터링 쿼리
@@ -42,6 +42,11 @@ export default async function Home({ searchParams }: HomeProps) {
   // 카테고리 필터
   if (category && category !== "전체") {
     queryBuilder = queryBuilder.eq("category", category);
+  }
+  
+  // 판매 완료 제외 필터
+  if (hide_sold === "true") {
+    queryBuilder = queryBuilder.neq("status", "sold");
   }
 
   const { data: dbItems } = await queryBuilder;

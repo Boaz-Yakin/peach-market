@@ -82,13 +82,26 @@ export default async function ItemDetailPage({ params }: PageProps) {
       {/* Content */}
       <main className="flex-1 pb-32">
         {/* Seller Info Row */}
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-300 to-pink-400 flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden">
-             <span className="text-white font-bold text-[16px]">🍑</span>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-peach to-peach-dark flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden ring-2 ring-white">
+               <span className="text-white font-bold text-[18px]">🍑</span>
+            </div>
+            <div>
+              <p className="text-[15px] font-bold text-gray-900 leading-tight">피치마켓 사용자 {isOwner && "(나)"}</p>
+              <p className="text-[12px] text-gray-500 mt-0.5">{item.location}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-[15px] font-semibold text-gray-900">피치마켓 사용자 {isOwner && "(나)"}</p>
-            <p className="text-[13px] text-gray-500">{item.location}</p>
+          
+          {/* Seller Temperature / Brix */}
+          <div className="flex flex-col items-end">
+            <div className="flex items-center gap-1.5 mb-1">
+               <span className="text-[14px] font-black text-[#ff6b6b]">36.5°C</span>
+               <span className="text-[16px] leading-none">🍑</span>
+            </div>
+            <div className="w-24 h-1 bg-gray-100 rounded-full overflow-hidden">
+               <div className="h-full bg-gradient-to-r from-orange-300 to-peach-dark w-[36.5%]"></div>
+            </div>
           </div>
         </div>
 

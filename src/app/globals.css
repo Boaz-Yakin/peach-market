@@ -38,6 +38,15 @@ body {
     scrollbar-width: none;
 }
 
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite linear;
+}
+
 @keyframes peach-pulse {
   0% { transform: scale(1); opacity: 0.5; }
   50% { transform: scale(1.2); opacity: 1; }
