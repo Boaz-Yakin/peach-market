@@ -330,7 +330,7 @@ export default function ChatRoomPage() {
                       <span className="text-xl">📍</span>
                       <span className="font-black font-display">약속 장소 공유</span>
                     </div>
-                    <div className="w-full h-40 bg-surface-container-high rounded-xl relative overflow-hidden">
+                    <div className="w-full h-40 bg-surface-container-high rounded-xl relative overflow-hidden shadow-sm">
                       <iframe 
                         width="100%" 
                         height="100%" 
@@ -340,7 +340,19 @@ export default function ChatRoomPage() {
                         src={`https://maps.google.com/maps?q=${encodeURIComponent(msg.content.replace("[LOCATION]", "").trim())}&t=m&z=15&output=embed`}
                       ></iframe>
                     </div>
-                    <p className="text-[13px] opacity-90 leading-snug">{msg.content.replace("[LOCATION]", "").trim()}</p>
+                    <div className="flex items-center justify-between mt-2 gap-2">
+                      <p className="text-[13px] opacity-90 leading-snug font-medium truncate flex-1">
+                        {msg.content.replace("[LOCATION]", "").trim()}
+                      </p>
+                      <a 
+                        href={`https://maps.google.com/maps?q=${encodeURIComponent(msg.content.replace("[LOCATION]", "").trim())}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-[11px] font-bold text-primary bg-primary/10 px-3 py-1.5 rounded-full flex-shrink-0 transition-colors hover:bg-primary/20"
+                      >
+                        지도 앱으로 열기
+                      </a>
+                    </div>
                   </div>
                 ) : (
                   msg.content
@@ -360,7 +372,7 @@ export default function ChatRoomPage() {
           <button 
             type="button"
             onClick={() => {
-              const loc = prompt("공유할 장소 이름을 입력하세요 (예: 강남역 11번 출구)");
+              const loc = prompt("공유할 장소 이름을 입력하세요 (예: H mart Duluth)");
               if (loc) {
                 setNewMessage(`[LOCATION] ${loc}`);
                 // 이후 자동으로 전송되도록 유도하거나 직접 전송 함수 호출 가능
