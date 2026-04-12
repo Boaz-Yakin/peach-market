@@ -1,33 +1,78 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f9fafb;
-  --foreground: #111827;
-  --color-peach-light: #ffe4e1;
-  --color-peach: #ff8c82;
-  --color-peach-dark: #fc6456;
+  /* Stitch 'Harmonious Hearth' Design Tokens */
+  --background: #f9f9ff;
+  --foreground: #121c2a;
+  
+  --primary: #9f4122;
+  --primary-container: #ff8a65;
+  --on-primary: #ffffff;
+  
+  --secondary: #8d4d38;
+  --secondary-container: #fdaa90;
+  
+  --surface: #f9f9ff;
+  --surface-container-low: #eff3ff;
+  --surface-container-high: #dee9fd;
+  --surface-container-lowest: #ffffff;
+  
+  --peach-light: #ffdbd0;
+  --peach-dark: #9f4122;
+  
+  --outline: #89726b;
+  --outline-variant: #ddc0b8;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  
   --font-sans: var(--font-noto-sans);
-  --color-peach: var(--color-peach);
-  --color-peach-light: var(--color-peach-light);
-  --color-peach-dark: var(--color-peach-dark);
+  --font-display: var(--font-plus-jakarta);
+  --font-body: var(--font-inter);
+  
+  --color-primary: var(--primary);
+  --color-primary-container: var(--primary-container);
+  --color-on-primary: var(--on-primary);
+  
+  --color-secondary: var(--secondary);
+  --color-secondary-container: var(--secondary-container);
+  
+  --color-surface: var(--surface);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  
+  --color-peach-light: var(--peach-light);
+  --color-peach-dark: var(--peach-dark);
+  
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
+
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
 }
 
-/* 다크모드에서도 배경과 텍스트가 겹치지 않도록 강제 설정 */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #f9fafb; /* 다크모드에서도 기본은 라이트하게 유지 (앱 성격상) */
-    --foreground: #111827;
-  }
-}
-
+/* Base Style */
 body {
-  background-color: #f3f4f6; /* 회색 배경으로 앱 느낌 강조 */
+  background-color: var(--surface-container-low);
   color: var(--foreground);
+  font-family: var(--font-noto-sans), sans-serif;
+}
+
+/* Glassmorphism Utility */
+.glass {
+  background: rgba(249, 249, 255, 0.7);
+  backdrop-blur: 20px;
+}
+
+/* Soft-Touch Button Animation */
+.btn-soft {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.btn-soft:active {
+  transform: scale(0.96);
 }
 
 .scrollbar-hide::-webkit-scrollbar {

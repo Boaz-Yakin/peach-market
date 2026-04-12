@@ -267,24 +267,24 @@ export default function ChatRoomPage() {
   if (!roomInfo) return <div className="p-10 text-center">채팅방을 불러오는 중... 🍑</div>;
 
   return (
-    <div className="flex flex-col min-h-[100dvh] bg-white">
+    <div className="flex flex-col min-h-[100dvh] bg-surface-container-low">
       {/* 헤더 */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 flex items-center justify-between px-4 h-14 shadow-sm">
-        <button onClick={() => router.back()} className="p-2 -ml-2 text-gray-800">
+      <header className="sticky top-0 z-50 glass flex items-center justify-between px-4 h-14 shadow-sm">
+        <button onClick={() => router.back()} className="p-2 -ml-2 text-foreground btn-soft">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <polyline points="15 18 9 12 15 6"></polyline>
           </svg>
         </button>
           <div className="flex flex-col items-center justify-center">
-            <div className="flex items-center gap-1.5">
-              <h1 className="font-bold text-[17px] text-gray-900 truncate">
+            <div className="flex items-center gap-2">
+              <h1 className="font-black text-[17px] text-foreground truncate font-display">
                 {currentUser?.id === roomInfo.seller_id ? "구매자님" : "판매자님"}
               </h1>
-              <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500 animate-pulse" : "bg-gray-300"}`} />
+              <div className={`w-2 h-2 rounded-full ${isConnected ? "bg-primary animate-pulse shadow-[0_0_8px_rgba(159,65,34,0.5)]" : "bg-foreground/20"}`} />
             </div>
           </div>
         <div className="w-8 flex items-center justify-end">
-          <button onClick={() => setIsMenuOpen(true)} className="p-2 -mr-2 text-gray-800 transition-opacity hover:opacity-70">
+          <button onClick={() => setIsMenuOpen(true)} className="p-2 -mr-2 text-foreground btn-soft">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <circle cx="12" cy="5" r="1.5" />
               <circle cx="12" cy="12" r="1.5" />
@@ -294,36 +294,56 @@ export default function ChatRoomPage() {
         </div>
       </header>
 
-      {/* 상품 정보 바 (헤더 아래 고정) */}
+      {/* 상품 정보 바 (헤더 아래 고정) - Tonal Layering 적용 */}
       <Link 
         href={`/item/${roomInfo.item.id}`}
-        className="sticky top-14 z-40 bg-white/90 backdrop-blur-sm px-4 py-2 border-b border-gray-100 flex items-center gap-3"
+        className="sticky top-14 z-40 bg-surface-container-low/95 backdrop-blur-sm px-5 py-3 border-b border-surface-container-high flex items-center gap-4"
       >
-        <div className="relative w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 bg-gray-50 border border-gray-100">
+        <div className="relative w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-surface-container-highest shadow-sm">
           <Image src={roomInfo.item.image_url} alt={roomInfo.item.title} fill className="object-cover" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-[13px] font-bold text-gray-900 truncate">{roomInfo.item.title}</p>
-          <p className="text-[12px] text-peach-dark font-bold">${roomInfo.item.price.toLocaleString()}</p>
+          <p className="text-[14px] font-bold text-foreground truncate font-display">{roomInfo.item.title}</p>
+          <p className="text-[13px] text-primary font-black mt-0.5">${roomInfo.item.price.toLocaleString()}</p>
         </div>
-        <div className="text-[11px] font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">거래중</div>
+        <div className="text-[11px] font-black text-primary bg-primary/10 px-3 py-1.5 rounded-full border border-primary/20">거래중</div>
       </Link>
 
-      {/* 메시지 리스트 - 네이티브 스크롤 & flex-col-reverse */}
-      <main className="flex-1 flex flex-col-reverse px-4 py-4 space-y-4 space-y-reverse">
+      {/* 메시지 리스트 */}
+      <main className="flex-1 flex flex-col-reverse px-4 py-6 space-y-6 space-y-reverse">
         {messages.map((msg) => {
           const isMe = msg.sender_id === currentUser?.id;
+          const isLocation = msg.content.startsWith("[LOCATION]");
+          
           return (
             <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
               <div
-                className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-[15px] ${
+                className={`max-w-[85%] px-5 py-3 rounded-[24px] text-[15px] font-medium transition-all shadow-sm ${
                   isMe
-                    ? "bg-peach-dark text-white rounded-br-none shadow-sm"
-                    : "bg-gray-100 text-gray-800 rounded-bl-none shadow-sm"
+                    ? "bg-primary text-white rounded-br-none shadow-primary/10"
+                    : "bg-surface-container-lowest text-foreground rounded-bl-none shadow-black/5 border border-surface-container-high/50"
                 }`}
               >
-                {msg.content}
-                <div className={`text-[10px] mt-1 ${isMe ? "text-white/80 text-right" : "text-gray-500"}`}>
+                {isLocation ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xl">📍</span>
+                      <span className="font-black font-display">약속 장소 공유</span>
+                    </div>
+                    <div className="w-full h-32 bg-surface-container-high rounded-xl relative overflow-hidden">
+                       <div className="absolute inset-0 flex items-center justify-center bg-blue-50/50">
+                         <div className="text-center">
+                            <span className="text-3xl mb-2 inline-block">🗺️</span>
+                            <p className="text-[11px] text-blue-600 font-bold px-3">장소 지도가 포함된 메시지입니다.</p>
+                         </div>
+                       </div>
+                    </div>
+                    <p className="text-[13px] opacity-90 leading-snug">{msg.content.replace("[LOCATION]", "").trim()}</p>
+                  </div>
+                ) : (
+                  msg.content
+                )}
+                <div className={`text-[10px] mt-2 font-bold tracking-tighter ${isMe ? "text-white/60 text-right" : "text-foreground/30"}`}>
                   {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </div>
               </div>
@@ -332,34 +352,43 @@ export default function ChatRoomPage() {
         })}
       </main>
 
-      {/* 입력창 - 화면 하단 스티키 고정 */}
-      <footer className="sticky bottom-0 z-50 bg-white border-t border-gray-100 p-3 pb-safe">
-        <form onSubmit={sendMessage} className="flex items-center gap-2 max-w-2xl mx-auto">
-          <Link href="/" className="p-2 flex-shrink-0 cursor-pointer transition-transform hover:scale-110 active:scale-95" title="홈으로 가기">
-             <span className="text-xl animate-peach-pulse inline-block drop-shadow-sm">🍑</span>
-          </Link>
+      {/* 입력창 */}
+      <footer className="sticky bottom-0 z-50 bg-surface-container-low border-t border-surface-container-high p-4 pb-safe shadow-[0_-10px_30px_rgba(0,0,0,0.03)]">
+        <form onSubmit={sendMessage} className="flex items-center gap-3 max-w-2xl mx-auto">
+          <button 
+            type="button"
+            onClick={() => {
+              const loc = prompt("공유할 장소 이름을 입력하세요 (예: 강남역 11번 출구)");
+              if (loc) {
+                setNewMessage(`[LOCATION] ${loc}`);
+                // 이후 자동으로 전송되도록 유도하거나 직접 전송 함수 호출 가능
+              }
+            }}
+            className="w-11 h-11 flex-shrink-0 bg-surface-container-highest rounded-full flex items-center justify-center text-foreground/40 hover:text-primary transition-all btn-soft"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+          
           <div className="flex-1 relative">
             <input
               ref={inputRef}
               type="text"
               autoFocus
-              className="w-full bg-gray-50 rounded-full px-5 py-3 text-[15px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-peach-dark focus:bg-white transition-all shadow-inner"
-              placeholder="피치 메이트에게 메시지를 보내세요"
+              className="w-full bg-surface-container-lowest border-2 border-transparent rounded-2xl px-5 py-3.5 text-[15px] text-foreground font-medium focus:outline-none focus:border-primary/20 transition-all shadow-inner"
+              placeholder="메시지를 입력하세요..."
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
             />
-            {!newMessage && (
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none animate-bounce text-lg drop-shadow-sm">
-                ✨
-              </div>
-            )}
           </div>
           <button
             type="submit"
             disabled={!newMessage.trim()}
-            className="bg-peach-dark text-white w-10 h-10 rounded-full flex items-center justify-center disabled:bg-gray-200 disabled:text-gray-500 transition-all active:scale-95 shadow-lg shadow-peach-dark/20"
+            className="bg-primary text-white w-12 h-12 rounded-full flex items-center justify-center disabled:bg-surface-container-high disabled:text-foreground/20 transition-all active:scale-90 shadow-lg shadow-primary/25 btn-soft"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="rotate-45 -translate-y-0.5 -translate-x-0.5">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="rotate-45 -translate-y-0.5 -translate-x-0.5">
               <line x1="22" y1="2" x2="11" y2="13"></line>
               <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
             </svg>
@@ -369,63 +398,71 @@ export default function ChatRoomPage() {
 
       {/* 옵션 메뉴 (Bottom Sheet) */}
       {isMenuOpen && (
-        <div className="fixed inset-0 z-50 flex flex-col justify-end">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsMenuOpen(false)} />
-          <div className="relative bg-white rounded-t-3xl shadow-2xl pb-8 safe-area-inset-bottom z-10 animate-in fade-in slide-in-from-bottom duration-300">
-            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto my-3" />
-            <div className="px-6 py-4 space-y-4 text-[16px] font-bold text-gray-900">
+        <div className="fixed inset-0 z-[100] flex flex-col justify-end">
+          <div className="absolute inset-0 bg-foreground/20 backdrop-blur-md" onClick={() => setIsMenuOpen(false)} />
+          <div className="relative bg-surface-container-lowest rounded-t-[40px] shadow-2xl pb-12 safe-area-inset-bottom z-10 animate-in slide-in-from-bottom duration-500 transition-all">
+            <div className="w-12 h-1.5 bg-surface-container-highest rounded-full mx-auto my-4" />
+            <div className="px-8 py-4 space-y-6">
               {currentUser?.id === roomInfo.seller_id && (
                 <button
                   onClick={handleCompleteTransaction}
-                  className="w-full text-left py-3 text-peach-dark flex items-center gap-3 transition-colors hover:bg-red-50 rounded-lg px-2 -mx-2"
+                  className="w-full text-left py-4 text-primary flex items-center gap-4 transition-all hover:translate-x-1"
                 >
-                  <span className="text-xl">🤝</span> 거래 완료하기
+                  <span className="text-2xl">🤝</span> 
+                  <div>
+                    <p className="text-[17px] font-black font-display tracking-tight">거래 완료하기</p>
+                    <p className="text-[12px] opacity-60 font-medium">상대방에게 최고예요! 평가를 보냅니다.</p>
+                  </div>
                 </button>
               )}
               <button
                 onClick={() => {
-                  alert("신고가 접수되었습니다.");
+                  alert("신고/차단은 관리자에게 전송됩니다.");
                   setIsMenuOpen(false);
                 }}
-                className="w-full text-left py-3 flex items-center gap-3 transition-colors hover:bg-gray-50 rounded-lg px-2 -mx-2"
+                className="w-full text-left py-4 flex items-center gap-4 transition-all hover:translate-x-1"
               >
-                <span className="text-xl">🚨</span> 신고 / 차단하기
+                <span className="text-2xl">🚨</span>
+                <p className="text-[17px] font-black font-display tracking-tight text-foreground">신고 / 차단하기</p>
               </button>
               <button
                 onClick={handleLeaveRoom}
-                className="w-full text-left py-3 text-red-500 flex items-center gap-3 transition-colors hover:bg-red-50 rounded-lg px-2 -mx-2"
+                className="w-full text-left py-4 flex items-center gap-4 transition-all hover:translate-x-1"
               >
-                <span className="text-xl">🚪</span> 채팅방 나가기
+                <span className="text-2xl">🚪</span>
+                <p className="text-[17px] font-black font-display tracking-tight text-red-500">채팅방 나가기</p>
               </button>
             </div>
           </div>
         </div>
       )}
-
       {/* 피치 브릭스(리뷰) 평가 모달 */}
       {showReviewModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowReviewModal(false)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm z-10 animate-in zoom-in duration-300 flex flex-col items-center text-center">
-            <div className="text-6xl mb-4 animate-bounce mt-2">🍑</div>
-            <h2 className="text-[20px] font-bold text-gray-900 mb-2">달콤한 거래였나요?</h2>
-            <p className="text-[14px] text-gray-500 mb-6">
-              상대방의 매너를 평가해주세요.<br />피치 브릭스는 피치마켓의 핵심 신뢰 자산입니다.
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
+          <div className="absolute inset-0 bg-foreground/40 backdrop-blur-xl" onClick={() => setShowReviewModal(false)} />
+          <div className="relative bg-surface-container-lowest rounded-[40px] shadow-2xl p-8 w-full max-w-sm z-10 animate-in zoom-in duration-500 flex flex-col items-center text-center">
+            <div className="text-7xl mb-6 animate-bounce mt-4">🍑</div>
+            <h2 className="text-[24px] font-black text-foreground mb-4 font-display leading-tight">달콤한 거래였나요?</h2>
+            <p className="text-[14px] text-foreground/50 mb-8 font-medium leading-relaxed">
+              상대방의 매너를 평가해주세요.<br />피치 브릭스는 우리 동네를 더 따뜻하게 만드는<br />핵심 신뢰 자산입니다.
             </p>
-            <div className="flex gap-4 w-full">
-              <button 
-                onClick={() => { alert('최고예요 평가 완료!'); setShowReviewModal(false); router.replace("/chat"); }}
-                className="flex-1 py-3 bg-peach-dark text-white rounded-xl font-bold text-[15px] hover:bg-red-500 transition-colors"
+            <div className="flex flex-col gap-3 w-full">
+              <Link
+                href={`/review/${roomInfo.item.id}?roomId=${roomInfo.id}`}
+                className="w-full py-4 bg-primary text-white rounded-2xl font-black text-[16px] shadow-xl shadow-primary/30 btn-soft flex items-center justify-center"
               >
-                최고예요! 👍
+                상세 평가하러 가기 👍
+              </Link>
+              <button 
+                onClick={() => {
+                  setShowReviewModal(false);
+                  router.replace("/chat");
+                }}
+                className="w-full py-4 bg-surface-container-high text-foreground/40 rounded-2xl font-bold text-[14px] hover:text-foreground transition-colors"
+              >
+                나중에 할게요
               </button>
             </div>
-            <button 
-              onClick={() => { setShowReviewModal(false); router.replace("/chat"); }}
-              className="mt-4 text-[13px] text-gray-400 font-medium hover:text-gray-600"
-            >
-              다음에 할게요
-            </button>
           </div>
         </div>
       )}

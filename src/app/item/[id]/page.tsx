@@ -59,11 +59,31 @@ export default async function ItemDetailPage({ params }: PageProps) {
   const sellerBrix = sellerProfile?.peach_brix || 36.5;
   const sellerAvatar = sellerProfile?.avatar_url;
 
+  // 4. 이미 리뷰를 남겼는지 확인 (중복 방지)
+  let hasReviewed = false;
+  if (user) {
+    const { data: existingReview, error: reviewCheckError } = await supabase
+      .from('reviews')
+      .select('id')
+      .eq('item_id', id)
+      .eq('reviewer_id', user.id)
+      .maybeSingle();
+    
+    if (reviewCheckError) {
+      console.error("Review check error:", reviewCheckError.message);
+    }
+
+    if (existingReview) {
+      hasReviewed = true;
+      console.log(`[ReviewCheck] User ${user.id} has reviewed item ${id}`);
+    }
+  }
+
   return (
-    <div className="flex flex-col min-h-[100dvh] bg-white">
+    <div className="flex flex-col min-h-[100dvh] bg-surface-container-low">
       {/* Sticky Header */}
-      <header className="flex justify-between items-center px-4 h-14 border-b border-gray-100 sticky top-0 bg-white/90 backdrop-blur-md z-40">
-        <Link href="/" className="p-2 -ml-2 text-gray-800 transition-opacity hover:opacity-70" aria-label="뒤로 가기">
+      <header className="flex justify-between items-center px-4 h-14 glass sticky top-0 z-40">
+        <Link href="/" className="p-2 -ml-2 text-foreground transition-opacity hover:opacity-70 btn-soft" aria-label="뒤로 가기">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6"></polyline>
           </svg>
@@ -79,7 +99,7 @@ export default async function ItemDetailPage({ params }: PageProps) {
       </header>
 
       {/* Item Image */}
-      <div className="w-full aspect-square bg-gray-100 relative">
+      <div className="w-full aspect-square bg-surface-container-high relative overflow-hidden">
         <Image
           src={item.image_url}
           alt={item.title}
@@ -87,98 +107,114 @@ export default async function ItemDetailPage({ params }: PageProps) {
           className="object-cover"
           priority
         />
+        {/* Editorial Overlap Price */}
+        <div className="absolute bottom-6 left-6 glass px-5 py-2 rounded-2xl shadow-xl">
+           <p className="text-[24px] font-black text-primary font-display">{formatPrice(item.price)}</p>
+        </div>
       </div>
 
       {/* Content */}
       <main className="flex-1 pb-32">
-        {/* Seller Info Row */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+        {/* Seller Info Row - Tonal Layering */}
+        <div className="mx-4 mt-6 p-4 bg-surface-container-lowest rounded-2xl shadow-sm flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-peach to-peach-dark flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden ring-2 ring-white">
+            <div className="w-12 h-12 rounded-full bg-primary-container flex items-center justify-center flex-shrink-0 shadow-sm overflow-hidden ring-4 ring-surface-container-low">
                {sellerAvatar ? (
                  // eslint-disable-next-line @next/next/no-img-element
                  <img src={sellerAvatar} alt="Seller" className="w-full h-full object-cover" />
                ) : (
-                 <span className="text-white font-bold text-[18px]">🍑</span>
+                 <span className="text-white font-black text-[20px]">🍑</span>
                )}
             </div>
             <div>
-              <p className="text-[15px] font-bold text-gray-900 leading-tight">{sellerName} {isOwner && "(나)"}</p>
-              <p className="text-[12px] text-gray-500 mt-0.5">{item.location}</p>
+              <p className="text-[16px] font-bold text-foreground leading-tight font-display">{sellerName} {isOwner && "(나)"}</p>
+              <p className="text-[12px] text-foreground/50 mt-1 font-medium">{item.location}</p>
             </div>
           </div>
           
           {/* Seller Temperature / Brix */}
           <div className="flex flex-col items-end">
-            <div className="flex items-center gap-1.5 mb-1">
-               <span className="text-[14px] font-black text-[#ff6b6b]">{sellerBrix}%</span>
-               <span className="text-[16px] leading-none">🍑</span>
+            <div className="flex items-center gap-1.5 mb-1.5">
+               <span className="text-[15px] font-black text-primary">{sellerBrix}%</span>
+               <span className="text-[18px] leading-none">🍑</span>
             </div>
-            <div className="w-24 h-1 bg-gray-100 rounded-full overflow-hidden">
-               <div className="h-full bg-gradient-to-r from-orange-300 to-peach-dark" style={{ width: `${sellerBrix}%` }}></div>
+            <div className="w-24 h-1.5 bg-surface-container-low rounded-full overflow-hidden">
+               <div className="h-full bg-primary" style={{ width: `${sellerBrix}%` }}></div>
             </div>
           </div>
         </div>
 
         {/* Item Info */}
-        <div className="px-5 pt-5 pb-4 border-b border-gray-100">
-          {/* 상태 변경 (주인용) */}
-          {isOwner && (
-            <StatusSelector itemId={item.id} initialStatus={item.status} />
-          )}
-
-          <div className="flex items-center gap-2 mb-2.5">
-            <span className="inline-block text-[12px] font-semibold text-[#ff6b6b] bg-red-50 px-2.5 py-1 rounded-md">
+        <div className="px-6 pt-8 pb-4">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="inline-block text-[11px] font-black text-primary bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
               {item.category}
             </span>
             {item.status === "reserved" && (
-              <span className="inline-block text-[12px] font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md">
+              <span className="inline-block text-[11px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
                 예약중
               </span>
             )}
             {item.status === "sold" && (
-              <span className="inline-block text-[12px] font-bold text-gray-500 bg-gray-100 px-2.5 py-1 rounded-md">
+              <span className="inline-block text-[11px] font-black text-foreground/50 bg-foreground/5 px-3 py-1 rounded-full border border-foreground/10">
                 판매완료
               </span>
             )}
           </div>
-          <h1 className="text-[22px] font-bold text-gray-900 leading-tight">{item.title}</h1>
-          <p className="text-[13px] text-gray-400 mt-1.5">{getTimeAgo(item.created_at)}</p>
+
+          {/* 주인용 상태 변경 */}
+          {isOwner && (
+            <div className="mb-6 p-4 bg-surface-container-high/50 rounded-2xl border border-outline-variant/30">
+              <p className="text-[13px] font-bold text-foreground/60 mb-3">거래 상태 변경</p>
+              <StatusSelector itemId={item.id} initialStatus={item.status} />
+            </div>
+          )}
+
+          <h1 className="text-[26px] font-black text-foreground leading-tight tracking-tight font-display">{item.title}</h1>
+          <p className="text-[13px] text-foreground/40 mt-2 font-medium">{getTimeAgo(item.created_at)}</p>
         </div>
 
         {/* Description */}
-        <div className="px-5 py-5 border-b border-gray-100">
-          <p className="text-[16px] text-gray-700 leading-relaxed whitespace-pre-line text-pretty">
+        <div className="px-6 py-4">
+          <p className="text-[17px] text-foreground/80 leading-relaxed whitespace-pre-line text-pretty">
             {item.description || "상세 설명이 없습니다."}
           </p>
         </div>
 
-        {/* Location Info */}
-        <div className="px-5 py-4 flex items-center gap-2 text-gray-500">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="flex-shrink-0">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-            <circle cx="12" cy="10" r="3"></circle>
-          </svg>
-          <span className="text-[14px]">거래 희망 장소: <span className="font-medium text-gray-700">{item.location}</span></span>
-        </div>
+        {/* Review Trigger for Sold Items */}
+        {item.status === "sold" && !hasReviewed && (
+          <div className="mx-6 mt-8 p-6 bg-primary-container/20 rounded-3xl border border-primary/20 flex flex-col items-center text-center">
+            <div className="text-4xl mb-4">🤝</div>
+            <h3 className="text-[18px] font-black text-primary font-display mb-2">거래가 완료되었나요?</h3>
+            <p className="text-[14px] text-primary/70 mb-6 font-medium">상대방에게 '피치 당도'를 선물해 주세요!</p>
+            <Link 
+              href={`/review/${item.id}`}
+              className="w-full py-4 bg-primary text-white rounded-2xl font-black text-[16px] shadow-xl shadow-primary/30 btn-soft"
+            >
+              거래 평가하러 가기 🍑
+            </Link>
+          </div>
+        )}
       </main>
 
       {/* Bottom CTA Bar */}
-      <div className="fixed bottom-16 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-md border-t border-gray-100 px-5 py-4 flex items-center justify-between z-20">
-        <div>
-          <p className="text-[13px] text-gray-400 leading-none mb-0.5 font-medium">가격</p>
-          <p className="text-[21px] font-bold text-gray-900 leading-tight tracking-tight">{formatPrice(item.price)}</p>
+      <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto glass px-6 py-5 flex items-center justify-between z-20 pb-safe shadow-[0_-10px_30px_rgba(18,28,42,0.05)] rounded-t-3xl">
+        <div className="flex flex-col">
+          <p className="text-[12px] text-foreground/40 font-bold mb-0.5">희망 가격</p>
+          <p className="text-[24px] font-black text-primary leading-tight font-display">{formatPrice(item.price)}</p>
         </div>
 
         {/* 찜하기 & 채팅하기 */}
         <div className="flex items-center gap-3">
           <WishlistButton itemId={item.id} />
           {!isOwner && (
-            <ChatButton 
-              itemId={item.id} 
-              sellerId={item.user_id} 
-              buyerId={user?.id} 
-            />
+            <div className="flex-1">
+              <ChatButton 
+                itemId={item.id} 
+                sellerId={item.user_id} 
+                buyerId={user?.id} 
+              />
+            </div>
           )}
         </div>
       </div>

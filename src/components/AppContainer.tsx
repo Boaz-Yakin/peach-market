@@ -6,13 +6,18 @@ import BottomNav from "@/components/BottomNav";
 export default function AppContainer({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   
-  // 채팅 상세 페이지(/chat/[id])에서는 하단 네비게이션을 숨깁니다.
-  const isChatRoom = pathname?.startsWith("/chat/") && pathname.split("/").length > 2;
+  // 네비게이션을 숨길 페이지들 (집중이 필요한 페이지)
+  const hideNav = 
+    (pathname?.startsWith("/chat/") && pathname.split("/").length > 2) ||
+    pathname?.startsWith("/review/") ||
+    pathname?.startsWith("/item/") ||
+    pathname === "/write" ||
+    pathname?.startsWith("/edit/");
 
   return (
-    <div className={`flex-grow w-full max-w-md mx-auto bg-white shadow-sm min-h-screen relative text-gray-900 ${isChatRoom ? "" : "pb-16"}`}>
+    <div className={`flex-grow w-full max-w-md mx-auto bg-surface min-h-screen relative text-foreground ${hideNav ? "" : "pb-16"}`}>
       {children}
-      {!isChatRoom && <BottomNav />}
+      {!hideNav && <BottomNav />}
     </div>
   );
 }
