@@ -40,6 +40,8 @@ export default function ChatRoomPage() {
   const [isConnected, setIsConnected] = useState(false);
   const [debugStatus, setDebugStatus] = useState("초기화 중...");
   const inputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   // 채팅방 메뉴 및 기능 상태
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -264,6 +266,47 @@ export default function ChatRoomPage() {
         .eq("id", roomId);
     }
   };
+  
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0 || !currentUser) return;
+    
+    const file = e.target.files[0];
+    setIsUploading(true);
+    setIsAttachmentMenuOpen(false);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `chat/${roomId}/${fileName}`;
+
+      const { data, error: uploadError } = await supabase.storage
+        .from('item-images')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('item-images')
+        .getPublicUrl(filePath);
+
+      // 이미지 메시지 전송
+      const content = `[IMAGE] ${publicUrl}`;
+      
+      const { error: messageError } = await supabase.from("messages").insert({
+        room_id: roomId,
+        sender_id: currentUser.id,
+        content: content,
+      });
+
+      if (messageError) throw messageError;
+
+    } catch (err: any) {
+      alert("이미지 전송에 실패했습니다: " + err.message);
+    } finally {
+      setIsUploading(false);
+      if (imageInputRef.current) imageInputRef.current.value = "";
+    }
+  };
 
   if (!roomInfo) return <div className="p-10 text-center">채팅방을 불러오는 중... 🍑</div>;
 
@@ -323,9 +366,24 @@ export default function ChatRoomPage() {
                   isMe
                     ? "bg-primary text-white rounded-br-none shadow-primary/10"
                     : "bg-surface-container-lowest text-foreground rounded-bl-none shadow-black/5 border border-surface-container-high/50"
-                }`}
+                } ${msg.content.startsWith("[IMAGE]") ? "p-1 overflow-hidden border-0" : "px-5 py-3"}`}
               >
-                {isLocation ? (
+                {msg.content.startsWith("[IMAGE]") ? (
+                  <div className="relative group">
+                    <img 
+                      src={msg.content.replace("[IMAGE]", "").trim()} 
+                      alt="Shared content" 
+                      className="max-w-full max-h-[300px] object-cover rounded-[20px]"
+                      onLoad={() => {
+                        window.scrollTo({
+                          top: document.documentElement.scrollHeight,
+                          behavior: "smooth",
+                        });
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-active:bg-black/10 transition-colors pointer-events-none rounded-[20px]" />
+                  </div>
+                ) : isLocation ? (
                   <div className="space-y-3">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-xl">📍</span>
@@ -358,7 +416,7 @@ export default function ChatRoomPage() {
                 ) : (
                   msg.content
                 )}
-                <div className={`text-[10px] mt-2 font-bold tracking-tighter ${isMe ? "text-white/60 text-right" : "text-foreground/30"}`}>
+                <div className={`text-[10px] mt-2 font-bold tracking-tighter ${isMe ? "text-white/60 text-right" : "text-foreground/30"} ${msg.content.startsWith("[IMAGE]") ? "absolute bottom-3 right-3 bg-black/40 px-2 py-0.5 rounded-full text-white/90" : ""}`}>
                   {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </div>
               </div>
@@ -428,16 +486,25 @@ export default function ChatRoomPage() {
             <button 
               type="button"
               onClick={() => {
-                alert("사진 전송 기능은 준비 중입니다! 🙇‍♂️");
-                setIsAttachmentMenuOpen(false);
+                imageInputRef.current?.click();
               }}
+              disabled={isUploading}
               className="flex flex-col items-center gap-2 group"
             >
               <div className="w-14 h-14 bg-surface-container-highest group-active:scale-95 rounded-full flex items-center justify-center text-2xl shadow-sm transition-transform">
-                📷
+                {isUploading ? (
+                  <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                ) : "📷"}
               </div>
               <span className="text-[12px] font-bold text-foreground/70 tracking-tight">사진 전송</span>
             </button>
+            <input 
+              type="file" 
+              ref={imageInputRef} 
+              className="hidden" 
+              accept="image/*" 
+              onChange={handleImageUpload} 
+            />
           </div>
         </div>
       </footer>
