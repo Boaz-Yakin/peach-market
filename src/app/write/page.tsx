@@ -83,7 +83,7 @@ export default function WritePage() {
     if (!isFormValid || isLoading) return;
     setIsLoading(true);
     setError(null);
-
+    try {
       // 1. 이미지 업로드
       let finalImageUrls: string[] = [];
       if (selectedFiles.length > 0) {
