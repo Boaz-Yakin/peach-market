@@ -67,7 +67,7 @@ export default function EditPage() {
       setLocation(item.location);
       setDescription(item.description);
       setImageUrl(item.image_url);
-      setPreviewUrl(item.image_url);
+      setPreviewUrl(item.image_url?.split(',')[0] || null);
       setIsLoading(false);
     };
 

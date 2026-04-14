@@ -87,7 +87,7 @@ export default async function Home({ searchParams }: HomeProps) {
               className="flex bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all active:scale-[0.98] group"
             >
               <div className="w-[120px] h-[120px] flex-shrink-0 relative overflow-hidden bg-surface-container-high">
-                <Image src={item.image_url} alt={item.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                <Image src={item.image_url?.split(',')[0] || ''} alt={item.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
                 
                 {/* 상태 뱃지 오버레이 */}
                 {item.status === "reserved" && (

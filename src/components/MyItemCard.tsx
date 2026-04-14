@@ -44,7 +44,7 @@ export default function MyItemCard({ item, onDelete }: MyItemCardProps) {
       <Link href={`/item/${item.id}`} className="flex-1 flex items-center gap-4 min-w-0">
         {/* Item Image */}
         <div className="w-16 h-16 rounded-2xl bg-gray-100 overflow-hidden relative border border-black/5 shadow-sm shrink-0">
-          <Image src={item.image_url} alt={item.title} fill className="object-cover" />
+          <Image src={item.image_url?.split(',')[0] || ''} alt={item.title} fill className="object-cover" />
           
           {/* Status Overlay on profile card */}
           {item.status === "reserved" && (

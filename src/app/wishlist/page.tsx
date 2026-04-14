@@ -96,7 +96,7 @@ export default function WishlistPage() {
                 className="flex gap-4 p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors"
               >
                 <div className="w-[100px] h-[100px] flex-shrink-0 rounded-xl overflow-hidden bg-gray-100 relative shadow-sm">
-                  <Image src={wish.item.image_url} alt={wish.item.title} fill className="object-cover" />
+                  <Image src={wish.item.image_url?.split(',')[0] || ''} alt={wish.item.title} fill className="object-cover" />
                 </div>
                 <div className="flex flex-col justify-between py-1 flex-1">
                   <div>

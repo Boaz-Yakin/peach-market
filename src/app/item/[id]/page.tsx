@@ -98,20 +98,45 @@ export default async function ItemDetailPage({ params }: PageProps) {
         </div>
       </header>
 
-      {/* Item Image */}
-      <div className="w-full aspect-square bg-surface-container-high relative overflow-hidden">
-        <Image
-          src={item.image_url}
-          alt={item.title}
-          fill
-          className="object-cover"
-          priority
-        />
-        {/* Editorial Overlap Price */}
-        <div className="absolute bottom-6 left-6 glass px-5 py-2 rounded-2xl shadow-xl">
-           <p className="text-[24px] font-black text-primary font-display">{formatPrice(item.price)}</p>
-        </div>
-      </div>
+      {/* Item Images */}
+      {(() => {
+        const imageUrls = item.image_url ? item.image_url.split(',') : [];
+        return (
+          <div className="w-full aspect-square bg-surface-container-high relative overflow-hidden group">
+            {imageUrls.length > 0 ? (
+              <div className="flex w-full h-full overflow-x-auto snap-x snap-mandatory scrollbar-hide scroll-smooth">
+                {imageUrls.map((url: string, index: number) => (
+                  <div key={index} className="w-full h-full flex-shrink-0 snap-center relative">
+                    <Image
+                      src={url}
+                      alt={`${item.title} - 사진 ${index + 1}`}
+                      fill
+                      className="object-cover"
+                      priority={index === 0}
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
+                이미지 없음
+              </div>
+            )}
+            
+            {/* Pagination Badge */}
+            {imageUrls.length > 1 && (
+               <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm text-white px-3 py-1 rounded-full text-[11px] font-bold tracking-wider z-10 pointer-events-none">
+                 {imageUrls.length}장의 사진 👉
+               </div>
+            )}
+
+            {/* Editorial Overlap Price */}
+            <div className="absolute bottom-6 left-6 glass px-5 py-2 rounded-2xl shadow-xl z-10 pointer-events-none">
+              <p className="text-[24px] font-black text-primary font-display">{formatPrice(item.price)}</p>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Content */}
       <main className="flex-1 pb-32">

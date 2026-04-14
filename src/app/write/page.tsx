@@ -31,8 +31,8 @@ export default function WritePage() {
   const [error, setError] = useState<string | null>(null);
 
   // 이미지 상태 관리
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
 
   // 현재 사용자 확인
@@ -54,15 +54,29 @@ export default function WritePage() {
     description.trim() !== "" &&
     location.trim() !== "" &&
     category !== "" &&
-    selectedFile !== null; // 사진 필수
+    selectedFiles.length > 0; // 사진 필수
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      const url = URL.createObjectURL(file);
-      setPreviewUrl(url);
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      if (selectedFiles.length + files.length > 10) {
+        alert("사진은 최대 10장까지 업로드할 수 있습니다.");
+        return;
+      }
+      setSelectedFiles((prev) => [...prev, ...files]);
+      const urls = files.map((file) => URL.createObjectURL(file));
+      setPreviewUrls((prev) => [...prev, ...urls]);
     }
+  };
+
+  const removeImage = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+    setPreviewUrls((prev) => {
+      const newUrls = [...prev];
+      URL.revokeObjectURL(newUrls[index]);
+      newUrls.splice(index, 1);
+      return newUrls;
+    });
   };
 
   const handleSubmit = async () => {
@@ -70,28 +84,28 @@ export default function WritePage() {
     setIsLoading(true);
     setError(null);
 
-    try {
-      // 1. 이미지 업로드 (Supabase Storage: 'item-images' 버킷 필수)
-      let finalImageUrl = "";
-      if (selectedFile) {
-        const fileExt = selectedFile.name.split('.').pop();
-        const fileName = `${Date.now()}.${fileExt}`;
-        const filePath = `${userId}/${fileName}`;
+      // 1. 이미지 업로드
+      let finalImageUrls: string[] = [];
+      if (selectedFiles.length > 0) {
+        for (const file of selectedFiles) {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+          const filePath = `${userId}/${fileName}`;
 
-        const { error: uploadError } = await supabase.storage
-          .from('item-images')
-          .upload(filePath, selectedFile);
+          const { error: uploadError } = await supabase.storage
+            .from('item-images')
+            .upload(filePath, file);
 
-        if (uploadError) {
-          throw new Error("이미지 업로드에 실패했습니다. (버킷 확인 필요)");
+          if (uploadError) {
+            throw new Error(`이미지 업로드에 실패했습니다: ${file.name}`);
+          }
+
+          const { data: { publicUrl } } = supabase.storage
+            .from('item-images')
+            .getPublicUrl(filePath);
+          
+          finalImageUrls.push(publicUrl);
         }
-
-        // 이미지 공용 URL 가져오기
-        const { data: { publicUrl } } = supabase.storage
-          .from('item-images')
-          .getPublicUrl(filePath);
-        
-        finalImageUrl = publicUrl;
       }
 
       // 2. DB 저장
@@ -101,8 +115,8 @@ export default function WritePage() {
         location: location.trim(),
         category: category,
         description: description.trim(),
-        image_url: finalImageUrl,
-        user_id: userId, // 추가된 컬럼
+        image_url: finalImageUrls.join(','), // 콤마로 구분하여 저장
+        user_id: userId,
       });
 
       if (insertError) {
@@ -172,6 +186,7 @@ export default function WritePage() {
                 onChange={handleFileChange} 
                 className="hidden" 
                 accept="image/*"
+                multiple
               />
               
               <button
@@ -183,24 +198,29 @@ export default function WritePage() {
                   <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                   <circle cx="12" cy="13" r="4"></circle>
                 </svg>
-                <span className="text-[11px] font-semibold text-gray-400">{selectedFile ? "1/10" : "0/10"}</span>
+                <span className="text-[11px] font-semibold text-gray-400">{selectedFiles.length}/10</span>
               </button>
 
-              {previewUrl && (
-                <div className="relative snap-start flex-shrink-0 w-[80px] h-[80px] rounded-2xl overflow-hidden border border-black/5 shadow-sm group">
+              {previewUrls.map((url, index) => (
+                <div key={url} className="relative snap-start flex-shrink-0 w-[80px] h-[80px] rounded-2xl overflow-hidden border border-black/5 shadow-sm group">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                  <img src={url} alt={`Preview ${index}`} className="w-full h-full object-cover" />
                   <button 
-                    onClick={() => {setSelectedFile(null); setPreviewUrl(null);}}
-                    className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5 hover:bg-black transition-colors"
+                    onClick={() => removeImage(index)}
+                    className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5 hover:bg-black transition-colors z-10"
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="18" y1="6" x2="6" y2="18"></line>
                       <line x1="6" y1="6" x2="18" y2="18"></line>
                     </svg>
                   </button>
+                  {index === 0 && (
+                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] text-center py-0.5 font-bold">
+                      대표사진
+                    </div>
+                  )}
                 </div>
-              )}
+              ))}
             </div>
 
             {/* Form Fields */}
