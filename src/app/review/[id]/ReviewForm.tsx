@@ -38,63 +38,35 @@ export default function ReviewForm({ itemId, itemTitle, targetId, targetName, us
     setIsSubmitting(true);
 
     try {
-      // 1. 당도 수치화 및 반영 로직
-      // 선택한 긍정 배지 하나당 0.2% 상승 (더 눈에 띄게 조정)
-      const brixBonus = selectedBadges.length * 0.2;
+      // 1. 단일 RPC 호출로 트랜잭션 처리 (보안 및 정합성 확보)
+      const { data, error: rpcError } = await supabase.rpc('submit_review', {
+        p_item_id: itemId,
+        p_reviewer_id: userId,
+        p_target_id: targetId,
+        p_badges: selectedBadges
+      });
 
-      // 현재 상대방의 당도 가져오기
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('peach_brix')
-        .eq('id', targetId)
-        .single();
-      
-      const currentBrix = profile?.peach_brix || 36.5;
-      const newBrix = Math.min(100, currentBrix + brixBonus);
+      if (rpcError) throw rpcError;
 
-      console.log(`Brix Update: ${currentBrix}% -> ${newBrix}% (Bonus: +${brixBonus}%)`);
+      const { success, new_brix, bonus } = data as { success: boolean, new_brix: number, bonus: number };
 
-      // DB 업데이트
-      const { data: updateData, error: updateError } = await supabase
-        .from('profiles')
-        .update({ peach_brix: newBrix })
-        .eq('id', targetId)
-        .select();
-
-      if (updateError) throw updateError;
-      if (!updateData || updateData.length === 0) throw new Error("No rows updated");
-
-      // 1.5 리뷰 기록 남기기 (중복 방지 및 기록용)
-      const { error: reviewError } = await supabase
-        .from('reviews')
-        .insert({
-          item_id: itemId,
-          reviewer_id: userId,
-          target_id: targetId,
-          brix_bonus: brixBonus,
-          badges: selectedBadges
-        });
-
-      if (reviewError) {
-        console.error("Review logging failed:", reviewError);
-        throw reviewError;
-      }
+      if (!success) throw new Error("평가 반영에 실패했습니다.");
 
       // 2. 알림 전송 (신뢰 기반 인터랙션)
       await supabase.from('notifications').insert({
         user_id: targetId,
         title: "🍑 피치 당도가 올라갔어요!",
-        content: `'${itemTitle}' 거래 후 따뜻한 평가를 받아 당도가 ${brixBonus.toFixed(1)}% 상승했습니다.`,
+        content: `'${itemTitle}' 거래 후 따뜻한 평가를 받아 당도가 ${bonus.toFixed(1)}% 상승했습니다.`,
         type: "review"
       });
 
-      alert(`평가가 완료되었습니다! ${targetName}님의 당도가 ${newBrix.toFixed(1)}%가 되었습니다. 🍑`);
+      alert(`평가가 완료되었습니다! ${targetName}님의 당도가 ${new_brix.toFixed(1)}%가 되었습니다. 🍑`);
       router.push(`/item/${itemId}`);
       router.refresh(); // 상세 페이지 새로고침 유도
     } catch (err: any) {
       console.error("Evaluation submission failed:", err);
       const errorMessage = err.message || "알 수 없는 오류가 발생했습니다.";
-      alert(`평가 반영 중 오류가 발생했습니다: ${errorMessage}\n(보안 정책이나 데이터 설정을 확인해 주세요)`);
+      alert(`평가 반영 중 오류가 발생했습니다: ${errorMessage}\n(이미 평가하셨거나 서버 설정이 필요할 수 있습니다)`);
     } finally {
       setIsSubmitting(false);
     }

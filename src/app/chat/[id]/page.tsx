@@ -47,6 +47,9 @@ export default function ChatRoomPage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [isAttachmentMenuOpen, setIsAttachmentMenuOpen] = useState(false);
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [locationSearch, setLocationSearch] = useState("");
+  const [locationPreview, setLocationPreview] = useState("");
 
   // 환경변수 체크용
   const hasEnv = !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
@@ -469,12 +472,7 @@ export default function ChatRoomPage() {
               type="button"
               onClick={() => {
                 setIsAttachmentMenuOpen(false);
-                setTimeout(() => {
-                  const loc = prompt("공유할 장소 이름을 입력하세요 (예: H mart Duluth)");
-                  if (loc) {
-                    setNewMessage(`[LOCATION] ${loc}`);
-                  }
-                }, 300);
+                setIsLocationModalOpen(true);
               }}
               className="flex flex-col items-center gap-2 group"
             >
@@ -508,6 +506,68 @@ export default function ChatRoomPage() {
           </div>
         </div>
       </footer>
+
+      {/* 위치 선택 모달 (Place Picker) */}
+      {isLocationModalOpen && (
+        <div className="fixed inset-0 z-[150] flex flex-col justify-end">
+          <div className="absolute inset-0 bg-foreground/40 backdrop-blur-md" onClick={() => setIsLocationModalOpen(false)} />
+          <div className="relative bg-surface-container-lowest rounded-t-[40px] shadow-2xl p-8 safe-area-inset-bottom z-10 animate-in slide-in-from-bottom duration-500">
+            <div className="w-12 h-1.5 bg-surface-container-highest rounded-full mx-auto mb-6" />
+            
+            <h2 className="text-[20px] font-black text-foreground mb-4 font-display">약속 장소 정하기 📍</h2>
+            
+            <div className="space-y-4">
+              <div className="relative">
+                <input 
+                  type="text" 
+                  placeholder="장소 이름이나 주소를 입력하세요" 
+                  className="w-full bg-surface-container-high border-none rounded-2xl px-5 py-4 text-[15px] focus:ring-2 focus:ring-primary/20 outline-none font-medium"
+                  value={locationSearch}
+                  onChange={(e) => setLocationSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      setLocationPreview(locationSearch);
+                    }
+                  }}
+                />
+                <button 
+                  onClick={() => setLocationPreview(locationSearch)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-primary text-white px-4 py-2 rounded-xl text-[13px] font-bold shadow-lg shadow-primary/20"
+                >
+                  검색
+                </button>
+              </div>
+
+              {locationPreview && (
+                <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="w-full h-48 bg-surface-container-highest rounded-[24px] overflow-hidden border border-surface-container-high shadow-inner">
+                    <iframe 
+                      width="100%" 
+                      height="100%" 
+                      style={{ border: 0 }} 
+                      loading="lazy" 
+                      allowFullScreen 
+                      src={`https://maps.google.com/maps?q=${encodeURIComponent(locationPreview)}&t=m&z=15&output=embed`}
+                    ></iframe>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      setNewMessage(`[LOCATION] ${locationPreview}`);
+                      setIsLocationModalOpen(false);
+                      setLocationSearch("");
+                      setLocationPreview("");
+                    }}
+                    className="w-full py-4 bg-primary text-white rounded-2xl font-black text-[16px] shadow-xl shadow-primary/30 btn-soft"
+                  >
+                    이 장소 공유하기 🍑
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 옵션 메뉴 (Bottom Sheet) */}
       {isMenuOpen && (
