@@ -21,13 +21,13 @@ export default async function CommunityDetailPage(props: { params: Promise<{ id:
   const supabase = await createClient();
 
   // Fetch Post
-  const { data: post, error } = await supabase
+  const { data: postData, error } = await supabase
     .from("posts")
-    .select("*, profiles!posts_user_id_fkey(*)")
+    .select("*")
     .eq("id", id)
     .single();
 
-  if (error || !post) {
+  if (error || !postData) {
     return (
       <div className="min-h-[100dvh] bg-white flex flex-col items-center justify-center p-6 text-center">
         <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
@@ -40,11 +40,37 @@ export default async function CommunityDetailPage(props: { params: Promise<{ id:
   }
 
   // Fetch Comments
-  const { data: comments } = await supabase
+  const { data: commentsData } = await supabase
     .from("comments")
-    .select("*, profiles!comments_user_id_fkey(*)")
+    .select("*")
     .eq("post_id", id)
     .order("created_at", { ascending: true });
+
+  // Fetch Profile for Post Author
+  const { data: postProfile } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("id", postData.user_id)
+    .single();
+    
+  const post = { ...postData, profiles: postProfile || null };
+
+  // Fetch Profiles for Comments
+  const commentUserIds = Array.from(new Set(commentsData?.map((c: any) => c.user_id).filter(Boolean) || []));
+  const { data: commentProfiles } = await supabase
+    .from("profiles")
+    .select("*")
+    .in("id", commentUserIds);
+    
+  const profilesMap = (commentProfiles || []).reduce((acc: any, p: any) => {
+    acc[p.id] = p;
+    return acc;
+  }, {});
+
+  const comments = (commentsData || []).map((c: any) => ({
+    ...c,
+    profiles: profilesMap[c.user_id] || null
+  }));
 
   const imageUrls = post.image_url ? post.image_url.split(',') : [];
 
