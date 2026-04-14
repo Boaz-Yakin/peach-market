@@ -31,8 +31,8 @@ export default function EditPage() {
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchItem = async () => {
@@ -67,7 +67,7 @@ export default function EditPage() {
       setLocation(item.location);
       setDescription(item.description);
       setImageUrl(item.image_url);
-      setPreviewUrl(item.image_url?.split(',')[0] || null);
+      setPreviewUrls(item.image_url ? item.image_url.split(',') : []);
       setIsLoading(false);
     };
 
@@ -75,15 +75,33 @@ export default function EditPage() {
   }, [id, supabase, router]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPreviewUrl(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    if (e.target.files) {
+      const files = Array.from(e.target.files);
+      if (files.length > 10) {
+        alert("사진은 최대 10장까지 업로드할 수 있습니다.");
+        return;
+      }
+      setSelectedFiles(files); // Replace completely when selecting new files
+      const urls = files.map((file) => URL.createObjectURL(file));
+      setPreviewUrls(urls);
     }
+  };
+
+  const removeImage = (index: number) => {
+    setSelectedFiles((prev) => {
+      // If selectedFiles is empty, it means we are displaying existing images from DB.
+      // We can't easily "remove" one existing image from DB array in this simple UI without more state.
+      // So if prev is empty, we just remove the URL but selectedFiles is still empty.
+      return prev.filter((_, i) => i !== index);
+    });
+    setPreviewUrls((prev) => {
+      const newUrls = [...prev];
+      if (newUrls[index].startsWith('blob:')) {
+        URL.revokeObjectURL(newUrls[index]);
+      }
+      newUrls.splice(index, 1);
+      return newUrls;
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -98,26 +116,33 @@ export default function EditPage() {
     try {
       let finalImageUrl = imageUrl;
 
-      // 1. 새로운 사진이 선택되었다면 업로드
-      if (selectedFile) {
+      // 1. 새로운 사진이 선택되었다면 모두 업로드 후 url 업데이트
+      if (selectedFiles.length > 0) {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) throw new Error("로그인이 필요합니다.");
 
-        const fileExt = selectedFile.name.split(".").pop();
-        const fileName = `${Date.now()}.${fileExt}`;
-        const filePath = `${user.id}/${fileName}`;
+        let newUrls: string[] = [];
+        for (const file of selectedFiles) {
+          const fileExt = file.name.split(".").pop();
+          const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+          const filePath = `${user.id}/${fileName}`;
 
-        const { error: uploadError } = await supabase.storage
-          .from("item-images")
-          .upload(filePath, selectedFile);
+          const { error: uploadError } = await supabase.storage
+            .from("item-images")
+            .upload(filePath, file);
 
-        if (uploadError) throw uploadError;
+          if (uploadError) throw uploadError;
 
-        const { data: urlData } = supabase.storage
-          .from("item-images")
-          .getPublicUrl(filePath);
-        
-        finalImageUrl = urlData.publicUrl;
+          const { data: urlData } = supabase.storage
+            .from("item-images")
+            .getPublicUrl(filePath);
+          
+          newUrls.push(urlData.publicUrl);
+        }
+        finalImageUrl = newUrls.join(',');
+      } else {
+        // 기존 이미지를 지웠다면 업데이트된 내용 반영
+        finalImageUrl = previewUrls.join(',');
       }
 
       // 2. DB 업데이트
@@ -186,18 +211,24 @@ export default function EditPage() {
             onChange={handleFileChange} 
             accept="image/*" 
             className="hidden" 
+            multiple
           />
-          {previewUrl && (
-            <div className="relative w-20 h-20 rounded-xl overflow-hidden shrink-0 border border-gray-100">
-              <Image src={previewUrl} alt="Preview" fill className="object-cover" />
-              <div className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5">
+          {previewUrls.map((url, index) => (
+            <div key={url + index} className="relative w-20 h-20 rounded-xl overflow-hidden shrink-0 border border-gray-100">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={url} alt={`Preview ${index}`} className="w-full h-full object-cover" />
+              <button 
+                type="button"
+                onClick={() => removeImage(index)}
+                className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5 hover:bg-black transition-colors"
+              >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                   <line x1="18" y1="6" x2="6" y2="18"></line>
                   <line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>
-              </div>
+              </button>
             </div>
-          )}
+          ))}
         </div>
 
         {/* 입력 필드들 */}
