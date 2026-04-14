@@ -38,7 +38,7 @@ export default async function CommunityPage({ searchParams }: { searchParams: Pr
     const userIds = Array.from(new Set(postsData.map(p => p.user_id).filter(Boolean)));
     const { data: profilesData } = await supabase
       .from("profiles")
-      .select("id, nickname, avatar_url, location")
+      .select("id, display_name, avatar_url, city")
       .in("id", userIds);
       
     // 2. 댓글 매핑
@@ -122,7 +122,7 @@ export default async function CommunityPage({ searchParams }: { searchParams: Pr
                   
                   <div className="flex items-center gap-3 text-[12px] text-gray-400 font-medium mt-1">
                     <div className="flex items-center gap-1">
-                      <span className="max-w-[80px] truncate">{post.profiles?.nickname || "익명"}</span>
+                      <span className="max-w-[80px] truncate">{post.profiles?.display_name || "익명"}</span>
                     </div>
                     <span>•</span>
                     <span>{getTimeAgo(post.created_at)}</span>

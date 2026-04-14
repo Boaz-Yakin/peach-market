@@ -19,6 +19,7 @@ export default async function CommunityDetailPage(props: { params: Promise<{ id:
   const params = await props.params;
   const { id } = params;
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
   // Fetch Post
   const { data: postData, error } = await supabase
@@ -94,14 +95,22 @@ export default async function CommunityDetailPage(props: { params: Promise<{ id:
               <Image src={post.profiles.avatar_url} alt="profile" width={40} height={40} className="w-full h-full object-cover" />
             ) : (
                <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center text-white font-bold text-sm">
-                 {post.profiles?.nickname?.charAt(0) || "?"}
+                 {post.profiles?.display_name?.charAt(0) || "?"}
                </div>
             )}
           </div>
           <div>
-            <div className="font-bold text-[15px] text-gray-900">{post.profiles?.nickname || "익명"}</div>
-            <div className="text-[12px] text-gray-400 font-medium">{post.profiles?.location || "지역 미상"} • {getTimeAgo(post.created_at)}</div>
+            <div className="font-bold text-[15px] text-gray-900">{post.profiles?.display_name || "익명"}</div>
+            <div className="text-[12px] text-gray-400 font-medium">{post.profiles?.city || "지역 미상"} • {getTimeAgo(post.created_at)}</div>
           </div>
+          
+          {user?.id === postData.user_id && (
+            <div className="ml-auto flex items-center gap-3">
+              <Link href={`/community/edit/${id}`} className="text-[13px] font-medium text-gray-400 hover:text-gray-900">
+                수정
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Post Content */}
@@ -155,13 +164,13 @@ export default async function CommunityDetailPage(props: { params: Promise<{ id:
                       <Image src={comment.profiles.avatar_url} alt="profile" width={32} height={32} className="w-full h-full object-cover" />
                     ) : (
                       <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center text-white font-bold text-[10px]">
-                        {comment.profiles?.nickname?.charAt(0) || "?"}
+                        {comment.profiles?.display_name?.charAt(0) || "?"}
                       </div>
                     )}
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="font-bold text-[14px] text-gray-900">{comment.profiles?.nickname || "익명"}</span>
+                      <span className="font-bold text-[14px] text-gray-900">{comment.profiles?.display_name || "익명"}</span>
                       <span className="text-[11px] text-gray-400">{getTimeAgo(comment.created_at)}</span>
                     </div>
                     <p className="text-[14px] text-gray-800 leading-snug">{comment.content}</p>
