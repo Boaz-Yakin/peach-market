@@ -23,16 +23,46 @@ export default async function CommunityPage({ searchParams }: { searchParams: Pr
   const supabase = await createClient();
   let query = supabase
     .from("posts")
-    .select("*, profiles!posts_user_id_fkey(*), comments(count)")
+    .select("*")
     .order("created_at", { ascending: false });
 
   if (category !== "전체") {
     query = query.eq("category", category);
   }
   
-  // 만약 에러가 난다면 posts 테이블이 아직 없어서 발생하는 것이므로 대비를 해둡니다.
   const { data: postsData, error } = await query;
-  const posts: any[] = error ? [] : (postsData || []);
+  
+  let posts: any[] = [];
+  if (!error && postsData && postsData.length > 0) {
+    // 1. 작성자 프로필 매핑
+    const userIds = Array.from(new Set(postsData.map(p => p.user_id).filter(Boolean)));
+    const { data: profilesData } = await supabase
+      .from("profiles")
+      .select("id, nickname, avatar_url, location")
+      .in("id", userIds);
+      
+    // 2. 댓글 매핑
+    const postIds = postsData.map(p => p.id);
+    const { data: commentsData } = await supabase
+      .from("comments")
+      .select("post_id"); // 일단 전부 가져와서 클라이언트에서 개수를 셉니다 (Count API 대체)
+      
+    const profileMap = (profilesData || []).reduce((acc: any, profile: any) => {
+      acc[profile.id] = profile;
+      return acc;
+    }, {});
+    
+    const commentCountMap = (commentsData || []).reduce((acc: any, comment: any) => {
+      acc[comment.post_id] = (acc[comment.post_id] || 0) + 1;
+      return acc;
+    }, {});
+
+    posts = postsData.map(p => ({
+      ...p,
+      profiles: profileMap[p.user_id] || null,
+      comments: [{ count: commentCountMap[p.id] || 0 }]
+    }));
+  }
 
   const categories = ["전체", "맛집", "동네생활", "분실물", "취미/모임"];
 

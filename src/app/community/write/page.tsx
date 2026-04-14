@@ -233,7 +233,7 @@ export default function CommunityWritePage() {
       {showCategorySheet && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowCategorySheet(false)} />
-          <div className="relative bg-white rounded-t-3xl shadow-2xl pb-8 safe-area-inset-bottom z-10 animate-in fade-in slide-in-from-bottom duration-300 max-w-md mx-auto w-full">
+          <div className="relative bg-white rounded-t-3xl shadow-2xl pb-24 safe-area-inset-bottom z-10 animate-in fade-in slide-in-from-bottom duration-300 max-w-md mx-auto w-full">
             <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto my-3" />
             <div className="flex items-center justify-between px-6 pt-2 pb-4 border-b border-gray-50">
               <h2 className="text-[18px] font-bold text-gray-900">주제 선택</h2>
