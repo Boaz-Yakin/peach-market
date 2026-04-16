@@ -44,7 +44,7 @@ export function getThumbnailUrl(url: string | null | undefined, width = 300): st
   // 예: https://[project].supabase.co/storage/v1/object/public/item-images/image.webp
   // -> https://[project].supabase.co/storage/v1/render/image/public/item-images/image.webp?width=300&quality=75
   if (url.includes('supabase.co/storage/v1/object/public/')) {
-    return url.replace('/object/public/', '/render/image/public/') + `?width=${width}&quality=75`;
+    return url.replace('/object/public/', '/render/image/public/') + `?width=${width}&quality=75&resize=contain`;
   }
 
   return url;
@@ -59,8 +59,8 @@ export function getOptimizedImageUrl(url: string | null | undefined): string {
   if (!url) return '';
   
   if (url.includes('supabase.co/storage/v1/object/public/')) {
-    // 상세 페이지는 고해상도로 유지하되 품질만 살짝 조절
-    return url.replace('/object/public/', '/render/image/public/') + '?width=1080&quality=85';
+    // 상세 페이지는 고해상도로 유지하되 품질만 살짝 조절하며 전체가 보이도록 함
+    return url.replace('/object/public/', '/render/image/public/') + '?width=1080&quality=85&resize=contain';
   }
   
   return url;

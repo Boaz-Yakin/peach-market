@@ -93,7 +93,7 @@ export default async function Home({ searchParams }: HomeProps) {
                   alt={item.title} 
                   fill 
                   sizes="120px"
-                  className="object-cover group-hover:scale-105 transition-transform duration-500" 
+                  className="object-contain p-1 group-hover:scale-110 transition-transform duration-500" 
                 />
                 
                 {/* 상태 뱃지 오버레이 */}

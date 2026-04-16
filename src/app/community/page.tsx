@@ -148,7 +148,7 @@ export default async function CommunityPage({ searchParams }: { searchParams: Pr
                       alt="Post image" 
                       fill 
                       sizes="72px"
-                      className="object-cover" 
+                      className="object-contain p-1" 
                     />
                     {post.image_url.includes(',') && (
                       <div className="absolute bottom-1 right-1 bg-black/60 backdrop-blur-md rounded-md p-1 z-10">

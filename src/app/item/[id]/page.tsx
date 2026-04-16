@@ -113,7 +113,7 @@ export default async function ItemDetailPage({ params }: PageProps) {
                       alt={`${item.title} - 사진 ${index + 1}`}
                       fill
                       sizes="(max-width: 448px) 100vw, 448px"
-                      className="object-cover"
+                      className="object-contain"
                       priority={index === 0}
                     />
                   </div>
