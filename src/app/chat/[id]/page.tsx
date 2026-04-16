@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "../../../lib/supabaseBrowser";
+import { compressImage } from "../../../lib/imageUtils";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -278,13 +279,16 @@ export default function ChatRoomPage() {
     setIsAttachmentMenuOpen(false);
 
     try {
-      const fileExt = file.name.split('.').pop();
+      // 이미지 초경량 압축 (Vanguard Alliance 방식 적용)
+      const compressedFile = await compressImage(file);
+
+      const fileExt = compressedFile.name.split('.').pop();
       const fileName = `${Date.now()}.${fileExt}`;
       const filePath = `chat/${roomId}/${fileName}`;
 
       const { data, error: uploadError } = await supabase.storage
         .from('item-images')
-        .upload(filePath, file);
+        .upload(filePath, compressedFile);
 
       if (uploadError) throw uploadError;
 

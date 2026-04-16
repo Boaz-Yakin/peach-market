@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { createClient } from "../../../lib/supabaseBrowser";
+import { compressImage } from "../../../lib/imageUtils";
 import Image from "next/image";
 
 const CATEGORIES = [
@@ -123,13 +124,16 @@ export default function EditPage() {
 
         let newUrls: string[] = [];
         for (const file of selectedFiles) {
-          const fileExt = file.name.split(".").pop();
+          // 이미지 초경량 압축 (Vanguard Alliance 방식 적용)
+          const compressedFile = await compressImage(file);
+
+          const fileExt = compressedFile.name.split(".").pop();
           const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
           const filePath = `${user.id}/${fileName}`;
 
           const { error: uploadError } = await supabase.storage
             .from("item-images")
-            .upload(filePath, file);
+            .upload(filePath, compressedFile);
 
           if (uploadError) throw uploadError;
 

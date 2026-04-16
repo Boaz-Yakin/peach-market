@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "../../lib/supabaseBrowser";
+import { compressImage } from "../../lib/imageUtils";
 
 const CATEGORIES = [
   "📦 무빙세일",
@@ -88,13 +89,16 @@ export default function WritePage() {
       let finalImageUrls: string[] = [];
       if (selectedFiles.length > 0) {
         for (const file of selectedFiles) {
-          const fileExt = file.name.split('.').pop();
+          // 이미지 초경량 압축 (Vanguard Alliance 방식 적용)
+          const compressedFile = await compressImage(file);
+          
+          const fileExt = compressedFile.name.split('.').pop();
           const fileName = `${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
           const filePath = `${userId}/${fileName}`;
 
           const { error: uploadError } = await supabase.storage
             .from('item-images')
-            .upload(filePath, file);
+            .upload(filePath, compressedFile);
 
           if (uploadError) {
             throw new Error(`이미지 업로드에 실패했습니다: ${file.name}`);

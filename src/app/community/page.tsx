@@ -4,6 +4,7 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabaseServer";
 import SearchHeader from "@/components/SearchHeader";
 import BottomNav from "@/components/BottomNav";
+import { getThumbnailUrl } from "@/lib/imageUtils";
 
 export const dynamic = 'force-dynamic';
 
@@ -141,11 +142,16 @@ export default async function CommunityPage({ searchParams }: { searchParams: Pr
                 </div>
 
                 {post.image_url && (
-                  <div className="w-[72px] h-[72px] rounded-xl overflow-hidden shrink-0 border border-black/5 relative">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={post.image_url.split(',')[0]} alt="Post image" className="w-full h-full object-cover" />
+                  <div className="w-[72px] h-[72px] rounded-xl overflow-hidden shrink-0 border border-black/5 relative bg-gray-50">
+                    <Image 
+                      src={getThumbnailUrl(post.image_url.split(',')[0], 200)} 
+                      alt="Post image" 
+                      fill 
+                      sizes="72px"
+                      className="object-cover" 
+                    />
                     {post.image_url.includes(',') && (
-                      <div className="absolute bottom-1 right-1 bg-black/60 backdrop-blur-md rounded-md p-1">
+                      <div className="absolute bottom-1 right-1 bg-black/60 backdrop-blur-md rounded-md p-1 z-10">
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                           <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                           <line x1="9" y1="3" x2="9" y2="21"></line>

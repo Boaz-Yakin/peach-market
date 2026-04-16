@@ -7,6 +7,7 @@ import OwnerActions from "../../../components/OwnerActions";
 import ChatButton from "../../../components/ChatButton";
 import StatusSelector from "../../../components/StatusSelector";
 import ShareButton from "../../../components/ShareButton";
+import { getOptimizedImageUrl } from "../../../lib/imageUtils";
 
 export const dynamic = "force-dynamic";
 
@@ -108,9 +109,10 @@ export default async function ItemDetailPage({ params }: PageProps) {
                 {imageUrls.map((url: string, index: number) => (
                   <div key={index} className="w-full h-full flex-shrink-0 snap-center relative">
                     <Image
-                      src={url}
+                      src={getOptimizedImageUrl(url)}
                       alt={`${item.title} - 사진 ${index + 1}`}
                       fill
+                      sizes="(max-width: 448px) 100vw, 448px"
                       className="object-cover"
                       priority={index === 0}
                     />

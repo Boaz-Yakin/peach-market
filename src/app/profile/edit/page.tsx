@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "../../../lib/supabaseBrowser";
+import { compressImage } from "../../../lib/imageUtils";
 
 export default function ProfileEditPage() {
   const router = useRouter();
@@ -41,13 +42,16 @@ export default function ProfileEditPage() {
       const file = e.target.files?.[0];
       if (!file) return;
 
-      const fileExt = file.name.split('.').pop();
+      // 이미지 초경량 압축 (Vanguard Alliance 방식 적용)
+      const compressedFile = await compressImage(file);
+
+      const fileExt = compressedFile.name.split('.').pop();
       const fileName = `${user.id}-${Math.random()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
         .from('item-images') // reuse existing bucket
-        .upload(filePath, file);
+        .upload(filePath, compressedFile);
 
       if (uploadError) throw uploadError;
 
