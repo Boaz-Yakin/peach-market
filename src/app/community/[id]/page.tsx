@@ -143,9 +143,6 @@ export default async function CommunityDetailPage(props: { params: Promise<{ id:
           )}
         </div>
 
-        {/* --- YouTube Style: Comment Input here! --- */}
-        <CommentInput postId={id} />
-
         {/* Comments Section */}
         <div className="pb-24 divide-y divide-gray-50">
           <div className="px-4 py-3 bg-gray-50/50">
@@ -167,6 +164,9 @@ export default async function CommunityDetailPage(props: { params: Promise<{ id:
           )}
         </div>
       </main>
+
+      {/* 댓글 입력창 (하단 고정) */}
+      <CommentInput postId={id} />
     </div>
   );
 }

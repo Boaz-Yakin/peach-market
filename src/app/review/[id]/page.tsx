@@ -88,6 +88,7 @@ export default async function ReviewPage(props: { params: Promise<{ id: string }
         targetId={targetId}
         targetName={targetName}
         userId={user.id}
+        roomId={roomId}
       />
     </div>
   );

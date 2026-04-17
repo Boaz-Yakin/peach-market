@@ -4,6 +4,7 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabaseServer";
 import SearchHeader from "@/components/SearchHeader";
 import BottomNav from "@/components/BottomNav";
+import LocalInfoWidget from "@/components/LocalInfoWidget";
 import { getThumbnailUrl } from "@/lib/imageUtils";
 import AdSlot from "@/components/AdSlot";
 import { MOCK_ADS } from "@/lib/ads";
@@ -88,6 +89,11 @@ export default async function CommunityPage({ searchParams }: { searchParams: Pr
     }));
   }
 
+  // 3. 인기 글 (실시간 Hot) - 댓글 많은 순 상위 3개
+  const hotPosts = [...posts]
+    .sort((a, b) => (b.comments?.[0]?.count || 0) - (a.comments?.[0]?.count || 0))
+    .slice(0, 3);
+
   // 커뮤니티 광고 주입 로직: 4개 게시글마다 광고 1개 삽입
   const adFrequency = 4;
   const feedItems: any[] = [];
@@ -104,7 +110,7 @@ export default async function CommunityPage({ searchParams }: { searchParams: Pr
     }
   });
 
-  const categories = ["전체", "맛집", "동네생활", "분실물", "취미/모임"];
+  const categories = ["전체", "이벤트", "생활정보", "맛집", "동네생활", "취미/모임"];
 
   return (
     <main className="min-h-screen bg-surface-container-low">
@@ -135,6 +141,67 @@ export default async function CommunityPage({ searchParams }: { searchParams: Pr
       <div className="px-4 py-3">
         <AdSlot ad={MOCK_ADS[0]} />
       </div>
+
+      {/* Community Event Banner - Peach Special */}
+      <div className="px-4 mb-2">
+        <Link href="/events/peach-meetup-01">
+          <div className="bg-gradient-to-r from-[#ff6b6b] to-[#ff8e8e] rounded-2xl p-4 shadow-md overflow-hidden relative group cursor-pointer active:scale-[0.98] transition-all">
+            <div className="relative z-10">
+              <span className="inline-block bg-white/20 backdrop-blur-md text-white text-[10px] font-black px-2 py-0.5 rounded-full mb-2 tracking-widest uppercase">
+                Notice
+              </span>
+              <h3 className="text-white text-[18px] font-black leading-tight mb-1">
+                🍑 조지아 피치 마켓<br />첫 오프라인 밋업!
+              </h3>
+              <p className="text-white/80 text-[13px] font-medium">
+                4월 25일 @Duluth H-Mart 앞 광장
+              </p>
+            </div>
+            <div className="absolute -right-4 -bottom-4 text-7xl opacity-20 transform -rotate-12 group-hover:rotate-0 transition-transform duration-500">
+              🍑
+            </div>
+          </div>
+        </Link>
+      </div>
+
+      {/* Peach Talk Spot (Local Info) */}
+      <LocalInfoWidget />
+
+      {/* 실시간 인기글 - HOT */}
+      {hotPosts.length > 0 && (
+        <div className="px-4 py-4">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-[17px] font-black text-gray-900">실시간 🔥 HOT</span>
+          </div>
+          <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
+            {hotPosts.map((post) => (
+              <Link 
+                key={`hot-${post.id}`} 
+                href={`/community/${post.id}`}
+                className="min-w-[240px] bg-white rounded-2xl p-4 shadow-sm border border-[#ff6b6b]/10 active:scale-[0.98] transition-all"
+              >
+                <span className="text-[11px] font-black text-[#ff6b6b] mb-1 block uppercase tracking-tighter">
+                  {post.category}
+                </span>
+                <p className="text-[14px] font-bold text-gray-800 line-clamp-2 leading-snug mb-3">
+                  {post.content}
+                </p>
+                <div className="flex items-center justify-between mt-auto">
+                  <span className="text-[11px] text-gray-400 font-medium">
+                    {post.profiles?.display_name || "익명"}
+                  </span>
+                  <div className="flex items-center gap-1 text-[#ff6b6b] bg-[#ff6b6b]/5 px-2 py-0.5 rounded-full text-[11px] font-black">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    <span>{post.comments?.[0]?.count || 0}</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Posts List or Empty State */}
       {posts.length === 0 ? (

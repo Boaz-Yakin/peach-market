@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "../../../lib/supabaseBrowser";
 import { compressImage } from "../../../lib/imageUtils";
-import { calculatePeachFee } from "../../../lib/paymentUtils";
+import { calculatePeachFee, MIN_SAFE_PAY_AMOUNT } from "../../../lib/paymentUtils";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -103,6 +103,33 @@ export default function ChatRoomPage() {
 
     } catch (err: any) {
       alert("거래 상태 변경에 실패했습니다: " + err.message);
+    }
+  };
+
+  // Stripe 결제 핸들러
+  const handleStripePayment = async (txId: string, amount: number) => {
+    try {
+      setDebugStatus("결제 세션 생성 중...");
+      const response = await fetch('/api/payment/create-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          itemId: roomInfo?.item?.id || '',
+          amount: amount,
+          sellerId: roomInfo?.seller_id || '',
+          roomId: roomId,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error(data.error || "결제 세션을 생성하지 못했습니다.");
+      }
+    } catch (err: any) {
+      alert("Stripe 연동 에러: " + err.message);
+      setDebugStatus("결제 실패");
     }
   };
 
@@ -295,9 +322,11 @@ export default function ChatRoomPage() {
       }
     };
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleVisibilityChange);
 
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleVisibilityChange);
       clearInterval(pollInterval);
       if (channel) supabase.removeChannel(channel);
     };
@@ -377,15 +406,23 @@ export default function ChatRoomPage() {
   };
   
   const handleRequestSafePay = async () => {
+    alert("피치 안심결제 기능은 곧 조지아주 정식 고시와 함께 찾아옵니다! 🍑 (Comming Soon)");
+    return;
+    
+    // 아래 코드는 차후 활성화 시 사용 (현재는 unreachable)
     if (!currentUser || !roomInfo) return;
     
-    // 구매자만 요청 가능하도록 체크
-    if (currentUser.id !== roomInfo.buyer_id) {
+    if (currentUser.id !== roomInfo?.buyer_id) {
       alert("안심 결제는 구매자만 요청할 수 있습니다.");
       return;
     }
 
-    const amount = roomInfo.item.price;
+    if ((roomInfo?.item?.price || 0) < MIN_SAFE_PAY_AMOUNT) {
+      alert(`안심결제는 $${MIN_SAFE_PAY_AMOUNT} 이상의 상품만 가능합니다. 소액 상품은 현장 거래를 권장합니다.`);
+      return;
+    }
+
+    const amount = roomInfo?.item?.price || 0;
     const fee = calculatePeachFee(amount);
     
     setIsAttachmentMenuOpen(false);
@@ -395,9 +432,9 @@ export default function ChatRoomPage() {
       const { data: tx, error: txError } = await supabase
         .from("transactions")
         .insert({
-          item_id: roomInfo.item.id,
-          buyer_id: roomInfo.buyer_id,
-          seller_id: roomInfo.seller_id,
+          item_id: roomInfo?.item?.id || '',
+          buyer_id: roomInfo?.buyer_id || '',
+          seller_id: roomInfo?.seller_id || '',
           amount: amount,
           fee: fee,
           status: 'pending'
@@ -610,7 +647,7 @@ export default function ChatRoomPage() {
                           {/* 상태별 버튼 로직 */}
                           {tx.status === 'pending' && (
                             <button 
-                              onClick={() => isBuyer && updateTransactionStatus(txId, 'paid')}
+                              onClick={() => isBuyer && handleStripePayment(txId, tx.amount)}
                               disabled={!isBuyer}
                               className={`w-full py-3 rounded-2xl font-black text-[14px] shadow-lg transition-all active:scale-95 ${
                                 isBuyer 
@@ -730,15 +767,23 @@ export default function ChatRoomPage() {
                   <span className="text-[12px] font-bold text-gray-400 tracking-tight">결제 진행중</span>
                 </div>
               ) : (
-                <button 
-                  type="button"
-                  onClick={handleRequestSafePay}
-                  className="flex flex-col items-center gap-2 group shrink-0"
-                >
-                  <div className="w-14 h-14 bg-primary/10 text-primary group-active:scale-95 rounded-full flex items-center justify-center text-2xl shadow-sm transition-transform border border-primary/20">
+                  <button 
+                    type="button"
+                    onClick={handleRequestSafePay}
+                    className={`flex flex-col items-center gap-2 group shrink-0 ${(roomInfo?.item?.price || 0) < MIN_SAFE_PAY_AMOUNT ? 'opacity-50 grayscale' : ''}`}
+                  >
+                    <div className={`w-14 h-14 rounded-full flex items-center justify-center text-2xl shadow-sm transition-transform border ${
+                      (roomInfo?.item?.price || 0) < MIN_SAFE_PAY_AMOUNT 
+                        ? 'bg-gray-100 text-gray-400 border-gray-200' 
+                        : 'bg-primary/10 text-primary group-active:scale-95 border-primary/20'
+                    }`}>
                     🛡️
                   </div>
-                  <span className="text-[12px] font-bold text-primary tracking-tight">안심 결제</span>
+                  <span className={`text-[12px] font-bold tracking-tight ${
+                    (roomInfo?.item?.price || 0) < MIN_SAFE_PAY_AMOUNT ? 'text-gray-400' : 'text-primary'
+                  }`}>
+                    {(roomInfo?.item?.price || 0) < MIN_SAFE_PAY_AMOUNT ? `($${MIN_SAFE_PAY_AMOUNT}+)` : '안심 결제 (준비 중)'}
+                  </span>
                 </button>
               )
             )}

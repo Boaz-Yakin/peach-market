@@ -11,6 +11,7 @@ interface ReviewFormProps {
   targetId: string;
   targetName: string;
   userId: string;
+  roomId?: string;
 }
 
 const POSITIVE_BADGES = [
@@ -21,7 +22,7 @@ const POSITIVE_BADGES = [
   { id: "p5", text: "좋은 물건을 저렴하게 파세요", icon: "💸" },
 ];
 
-export default function ReviewForm({ itemId, itemTitle, targetId, targetName, userId }: ReviewFormProps) {
+export default function ReviewForm({ itemId, itemTitle, targetId, targetName, userId, roomId }: ReviewFormProps) {
   const [selectedBadges, setSelectedBadges] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
@@ -83,7 +84,12 @@ export default function ReviewForm({ itemId, itemTitle, targetId, targetName, us
       }
 
       alert(`평가가 완료되었습니다! ${targetName}님의 당도가 ${(res.new_brix ?? 36.5).toFixed(1)}%가 되었습니다. 🍑`);
-      router.push(`/item/${itemId}`);
+      
+      if (roomId) {
+        router.push(`/chat/${roomId}`);
+      } else {
+        router.push(`/item/${itemId}`);
+      }
       router.refresh();
     } catch (err: any) {
       console.error("Critical evaluation error:", err);
@@ -96,7 +102,7 @@ export default function ReviewForm({ itemId, itemTitle, targetId, targetName, us
   return (
     <>
       <header className="flex items-center px-4 h-14 glass sticky top-0 z-40">
-        <Link href={`/item/${itemId}`} className="p-2 -ml-2 text-foreground btn-soft">
+        <Link href={roomId ? `/chat/${roomId}` : `/item/${itemId}`} className="p-2 -ml-2 text-foreground btn-soft">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <polyline points="15 18 9 12 15 6"></polyline>
           </svg>

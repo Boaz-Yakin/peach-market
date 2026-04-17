@@ -3,6 +3,7 @@
  */
 
 export const SAFE_PAY_FEE_RATE = 0.035; // 3.5% 수수료
+export const MIN_SAFE_PAY_AMOUNT = 100; // 최소 안심결제 금액 ($100 미만은 현장 거래 권장)
 
 /**
  * 수수료 계산 함수

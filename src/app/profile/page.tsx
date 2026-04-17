@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "../../lib/supabaseServer";
 import AuthButton from "../../components/AuthButton";
 import MyItemsList from "../../components/MyItemsList";
+import StripeConnectButton from "../../components/StripeConnectButton";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,7 @@ export default async function ProfilePage() {
   let chatCount = 0;
   let items: any[] = [];
   let userBrix = 36.5; // 기본값
+  let profileData: any = null;
 
   if (user) {
     // 1. 내가 올린 상품 리스트 및 개수
@@ -47,6 +49,8 @@ export default async function ProfilePage() {
       .select('*')
       .eq('id', user.id)
       .single();
+    
+    profileData = profile;
     
     if (profile) {
       userBrix = profile.peach_brix;
@@ -151,9 +155,19 @@ export default async function ProfilePage() {
       </div>
 
       {/* Action Menu List */}
-      <div className="px-4 space-y-1">
-        {[
-          { icon: "🧡", label: "찜한 목록", href: "/wishlist", count: wishlistCount },
+      <div className="px-4 space-y-3">
+        {/* Stripe Connect Section */}
+        {user && (
+          <StripeConnectButton 
+            stripeAccountId={profileData?.stripe_account_id} 
+            isOnboardingComplete={profileData?.stripe_onboarding_complete} 
+          />
+        )}
+        
+        <div className="space-y-1">
+          {[
+            { icon: "🧡", label: "찜한 목록", href: "/wishlist", count: wishlistCount },
+
           { icon: "💬", label: "채팅 목록", href: "/chat", count: chatCount },
           { icon: "🛍️", label: "나눔/무료 상품", href: "/?category=나눔/덤" },
         ].map((menu) => (
@@ -179,6 +193,7 @@ export default async function ProfilePage() {
           </Link>
         ))}
       </div>
+    </div>
 
       {/* My Listings Dashboard */}
       <div id="items" className="mt-8 border-t-8 border-gray-50 pt-8 pb-10">
