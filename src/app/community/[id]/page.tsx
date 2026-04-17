@@ -2,6 +2,8 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabaseServer";
 import Image from "next/image";
+import CommentItem from "./CommentItem";
+import PostActions from "./PostActions";
 
 export const dynamic = 'force-dynamic';
 
@@ -104,13 +106,12 @@ export default async function CommunityDetailPage(props: { params: Promise<{ id:
             <div className="text-[12px] text-gray-400 font-medium">{post.profiles?.city || "지역 미상"} • {getTimeAgo(post.created_at)}</div>
           </div>
           
-          {user?.id === postData.user_id && (
-            <div className="ml-auto flex items-center gap-3">
-              <Link href={`/community/edit/${id}`} className="text-[13px] font-medium text-gray-400 hover:text-gray-900">
-                수정
-              </Link>
-            </div>
-          )}
+          {/* Post Actions (Report/Block/Edit) */}
+          <PostActions 
+            postId={id} 
+            authorId={postData.user_id} 
+            currentUserId={user?.id || null} 
+          />
         </div>
 
         {/* Post Content */}
@@ -150,34 +151,23 @@ export default async function CommunityDetailPage(props: { params: Promise<{ id:
         </div>
 
         {/* Comments Section */}
-        <div className="px-4 pb-24">
+        <div className="pb-24 divide-y divide-gray-50">
+          <div className="px-4 py-3 bg-gray-50/50">
+            <h3 className="text-[13px] font-bold text-gray-900">댓글 {comments?.length || 0}</h3>
+          </div>
           {(!comments || comments.length === 0) ? (
-            <div className="py-12 text-center">
-              <p className="text-[14px] text-gray-400 font-medium">제일 먼저 따뜻한 댓글을 남겨주세요!</p>
+            <div className="py-12 text-center bg-white">
+              <p className="text-[14px] text-gray-400 font-medium font-outfit">제일 먼저 따뜻한 댓글을 남겨주세요! 🍑</p>
             </div>
           ) : (
-            <div className="space-y-5 py-4">
-              {comments.map((comment) => (
-                <div key={comment.id} className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-100 shrink-0">
-                    {comment.profiles?.avatar_url ? (
-                      <Image src={comment.profiles.avatar_url} alt="profile" width={32} height={32} className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center text-white font-bold text-[10px]">
-                        {comment.profiles?.display_name?.charAt(0) || "?"}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="font-bold text-[14px] text-gray-900">{comment.profiles?.display_name || "익명"}</span>
-                      <span className="text-[11px] text-gray-400">{getTimeAgo(comment.created_at)}</span>
-                    </div>
-                    <p className="text-[14px] text-gray-800 leading-snug">{comment.content}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
+            comments.map((comment) => (
+              <CommentItem 
+                key={comment.id} 
+                comment={comment} 
+                currentUserId={user?.id || null} 
+                postAuthorId={postData.user_id}
+              />
+            ))
           )}
         </div>
       </main>

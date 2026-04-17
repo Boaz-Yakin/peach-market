@@ -262,8 +262,22 @@ export default function ChatRoomPage() {
       }
 
       // 정기적으로 리뷰 상태도 체크 (거래 완료 후 가이드 노출을 위해)
+      // 3. 리뷰 상태 체크
       if (roomInfoRef.current?.item.id && currentUserRef.current?.id) {
-        checkReviewStatus(roomInfoRef.current.item.id, currentUserRef.current.id);
+        try {
+          const { data: reviewData } = await supabase
+            .from("reviews")
+            .select("id")
+            .eq("item_id", roomInfoRef.current.item.id)
+            .eq("reviewer_id", currentUserRef.current.id)
+            .maybeSingle();
+          
+          if (reviewData) {
+             setHasReviewed(true);
+          }
+        } catch (e) {
+          console.error("Polling review check failed:", e);
+        }
       }
     };
 

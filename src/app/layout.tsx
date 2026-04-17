@@ -32,6 +32,8 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
+import PushManager from "@/components/PushManager";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -42,6 +44,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col font-sans">
         {/* 모바일 뷰어용 컨테이너 (Desktop 환경에서는 가운데 정렬된 모바일 사이즈 창으로 보임) */}
         <AppContainer>
+          <PushManager />
           {children}
         </AppContainer>
       </body>

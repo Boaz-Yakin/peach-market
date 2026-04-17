@@ -57,25 +57,26 @@ export default function ReviewForm({ itemId, itemTitle, targetId, targetName, us
       }
 
       // 2. reviews 테이블에 명시적 기록 (조회 및 중복 방지용)
-      // RPC에서 이미 처리했을 수 있으나, 조회용 데이터 보장을 위해 한번 더 시도 (Unique 제약조건이 막아줌)
+      // RPC 성공 이후 실행되므로, 조회용 데이터 보장만 목적으로 함 (칼럼명 최소화)
       try {
-        await supabase.from('reviews').upsert({
+        const { error: upsertError } = await supabase.from('reviews').upsert({
           item_id: itemId,
           reviewer_id: userId,
-          target_id: targetId,
-          rating_badges: selectedBadges,
+          target_id: targetId
         }, { onConflict: 'item_id, reviewer_id' });
-      } catch (reviewErr) {
-        console.warn("Manual review log skipped or already exists:", reviewErr);
+        
+        if (upsertError) console.warn("Manual upsert warning:", upsertError.message);
+      } catch (e) {
+        console.error("Secondary persistence failed:", e);
       }
 
       // 3. 알림 전송
       await supabase.from('notifications').insert({
         user_id: targetId,
         title: "🍑 피치 당도가 올라갔어요!",
-        content: `'${itemTitle}' 거래 후 따뜻한 평가를 받아 당도가 ${(res.bonus ?? 0).toFixed(1)}% 상승했습니다.`,
+        content: `&apos;${itemTitle}&apos; 거래 후 따뜻한 평가를 받아 당도가 ${(res.bonus ?? 0).toFixed(1)}% 상승했습니다.`,
         type: "review"
-      });
+      }).catch(e => console.error("Notification failed:", e));
 
       alert(`평가가 완료되었습니다! ${targetName}님의 당도가 ${(res.new_brix ?? 36.5).toFixed(1)}%가 되었습니다. 🍑`);
       router.push(`/item/${itemId}`);

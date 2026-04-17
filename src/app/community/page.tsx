@@ -25,6 +25,20 @@ export default async function CommunityPage({ searchParams }: { searchParams: Pr
   const { category = "전체" } = await searchParams;
   
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  // 0. 차단된 사용자 목록 가져오기
+  let blockedUserIds: string[] = [];
+  if (user) {
+    const { data: blocks } = await supabase
+      .from("user_blocks")
+      .select("blocked_id")
+      .eq("blocker_id", user.id);
+    if (blocks) {
+      blockedUserIds = blocks.map(b => b.blocked_id);
+    }
+  }
+
   let query = supabase
     .from("posts")
     .select("*")
@@ -32,6 +46,11 @@ export default async function CommunityPage({ searchParams }: { searchParams: Pr
 
   if (category !== "전체") {
     query = query.eq("category", category);
+  }
+  
+  // 차단된 유저의 글은 쿼리 레벨에서 제외 (PostgreSQL의 'not.in' 문법 사용)
+  if (blockedUserIds.length > 0) {
+    query = query.not("user_id", "in", `(${blockedUserIds.join(',')})`);
   }
   
   const { data: postsData, error } = await query;
@@ -49,7 +68,8 @@ export default async function CommunityPage({ searchParams }: { searchParams: Pr
     const postIds = postsData.map(p => p.id);
     const { data: commentsData } = await supabase
       .from("comments")
-      .select("post_id");
+      .select("post_id")
+      .in("post_id", postIds);
       
     const profileMap = (profilesData || []).reduce((acc: any, profile: any) => {
       acc[profile.id] = profile;

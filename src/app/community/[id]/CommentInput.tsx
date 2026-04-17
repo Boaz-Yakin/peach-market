@@ -30,6 +30,33 @@ export default function CommentInput({ postId }: { postId: string }) {
 
       if (error) throw error;
 
+      // --- 푸시 알림 트리거 (전략적 고도화) ---
+      try {
+        // 1. 게시글 작성자 ID 가져오기
+        const { data: post } = await supabase
+          .from("posts")
+          .select("user_id")
+          .eq("id", postId)
+          .single();
+
+        if (post && post.user_id !== user.id) {
+          // 2. 작성자에게 알림 전송 (본인 글에 본인이 단 댓글은 제외)
+          await fetch('/api/push/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: post.user_id,
+              title: "🍑 내 글에 새로운 댓글이 달렸어요!",
+              body: content.trim().substring(0, 50) + (content.length > 50 ? "..." : ""),
+              url: `/community/${postId}`
+            })
+          });
+        }
+      } catch (pushErr) {
+        console.error("Push notification failed:", pushErr);
+      }
+      // ------------------------------------
+
       setContent("");
       router.refresh(); // 새로고침해서 댓글 표시
     } catch (error) {
@@ -41,7 +68,7 @@ export default function CommentInput({ postId }: { postId: string }) {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-gray-100 p-3 pb-safe z-20">
+    <div className="fixed bottom-[64px] left-0 right-0 max-w-md mx-auto bg-white/90 backdrop-blur-md border-t border-gray-100 p-3 pb-safe z-[60] shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
       <form onSubmit={handleSubmit} className="flex gap-2">
         <input
           type="text"
