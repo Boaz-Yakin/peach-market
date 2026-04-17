@@ -68,7 +68,13 @@ export default function CommentInput({ postId }: { postId: string }) {
   };
 
   return (
-    <div className="fixed bottom-[76px] left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-xl border-t border-gray-100 p-3 pb-2 z-[999] shadow-[0_-10px_30px_rgba(0,0,0,0.08)]">
+    <div className="bg-white border-y border-gray-100 p-4 mb-2 animate-in fade-in duration-500">
+      <div className="flex items-center gap-3 mb-3">
+         <div className="w-8 h-8 rounded-full bg-peach-light/20 flex items-center justify-center text-sm">
+           🍑
+         </div>
+         <span className="text-[13px] font-bold text-gray-400">당신의 생각을 들려주세요</span>
+      </div>
       <form onSubmit={handleSubmit} className="flex gap-2">
         <input
           type="text"

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabaseServer";
 import Image from "next/image";
 import CommentItem from "./CommentItem";
 import PostActions from "./PostActions";
+import CommentInput from "./CommentInput";
 
 export const dynamic = 'force-dynamic';
 
@@ -141,14 +142,11 @@ export default async function CommunityDetailPage(props: { params: Promise<{ id:
             </div>
           )}
 
-          {/* Action Counts */}
-          <div className="flex items-center gap-4 text-[13px] font-medium text-gray-500 py-3 border-y border-gray-100">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xl">💬</span>
-              <span>댓글 {comments?.length || 0}</span>
-            </div>
           </div>
         </div>
+
+        {/* --- YouTube Style: Comment Input here! --- */}
+        <CommentInput postId={id} />
 
         {/* Comments Section */}
         <div className="pb-24 divide-y divide-gray-50">
@@ -171,12 +169,6 @@ export default async function CommunityDetailPage(props: { params: Promise<{ id:
           )}
         </div>
       </main>
-
-      {/* Comment Input */}
-      <CommentInput postId={id} />
     </div>
   );
 }
-
-// Client Component for Comment Input
-import CommentInput from "./CommentInput";
