@@ -47,6 +47,7 @@ export default function ChatRoomPage() {
   const [roomInfo, setRoomInfo] = useState<ChatRoom | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const currentUserRef = useRef<any>(null); // 실시간 리스너용 ref
+  const roomInfoRef = useRef<ChatRoom | null>(null); // 폴링용 ref
   const [isConnected, setIsConnected] = useState(false);
   const [debugStatus, setDebugStatus] = useState("초기화 중...");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -64,13 +65,15 @@ export default function ChatRoomPage() {
 
   // 리뷰 상태 확인 함수
   const checkReviewStatus = async (itemId: string, userId: string) => {
+    if (!itemId || !userId) return;
     const { data } = await supabase
       .from("reviews")
       .select("id")
       .eq("item_id", itemId)
       .eq("reviewer_id", userId)
-      .single();
-    if (data) setHasReviewed(true);
+      .maybeSingle();
+    
+    setHasReviewed(!!data);
   };
 
   // 0. 결제 상태 업데이트 함수
@@ -161,9 +164,11 @@ export default function ChatRoomPage() {
           .single();
 
         if (room) {
-          setRoomInfo(room as unknown as ChatRoom);
+          const roomData = room as unknown as ChatRoom;
+          setRoomInfo(roomData);
+          roomInfoRef.current = roomData;
           // 리뷰 상태 확인
-          checkReviewStatus(room.item.id, user.id);
+          checkReviewStatus(roomData.item.id, user.id);
         }
 
         const { data: msgs } = await supabase
@@ -246,13 +251,19 @@ export default function ChatRoomPage() {
         setMessages(msgs);
         
         // 상대방이 보낸(내가 받지 않은) 메시지 중 안 읽은 것들을 '읽음' 처리
-        if (currentUser?.id) {
+        const myId = currentUserRef.current?.id;
+        if (myId) {
           await supabase.from("messages")
             .update({ is_read: true })
             .eq("room_id", roomId)
-            .neq("sender_id", currentUser.id)
+            .neq("sender_id", myId)
             .eq("is_read", false);
         }
+      }
+
+      // 정기적으로 리뷰 상태도 체크 (거래 완료 후 가이드 노출을 위해)
+      if (roomInfoRef.current?.item.id && currentUserRef.current?.id) {
+        checkReviewStatus(roomInfoRef.current.item.id, currentUserRef.current.id);
       }
     };
 
