@@ -5,10 +5,13 @@ import { createClient } from "@/lib/supabaseServer";
 import SearchHeader from "@/components/SearchHeader";
 import BottomNav from "@/components/BottomNav";
 import { getThumbnailUrl } from "@/lib/imageUtils";
+import AdSlot from "@/components/AdSlot";
+import { MOCK_ADS } from "@/lib/ads";
 
 export const dynamic = 'force-dynamic';
 
 function getTimeAgo(dateString: string) {
+// ... (same as before)
   const date = new Date(dateString);
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
@@ -46,7 +49,7 @@ export default async function CommunityPage({ searchParams }: { searchParams: Pr
     const postIds = postsData.map(p => p.id);
     const { data: commentsData } = await supabase
       .from("comments")
-      .select("post_id"); // 일단 전부 가져와서 클라이언트에서 개수를 셉니다 (Count API 대체)
+      .select("post_id");
       
     const profileMap = (profilesData || []).reduce((acc: any, profile: any) => {
       acc[profile.id] = profile;
@@ -64,6 +67,22 @@ export default async function CommunityPage({ searchParams }: { searchParams: Pr
       comments: [{ count: commentCountMap[p.id] || 0 }]
     }));
   }
+
+  // 커뮤니티 광고 주입 로직: 4개 게시글마다 광고 1개 삽입
+  const adFrequency = 4;
+  const feedItems: any[] = [];
+  
+  posts.forEach((post, index) => {
+    feedItems.push({ type: 'post', data: post });
+    if ((index + 1) % adFrequency === 0) {
+      const adIndex = Math.floor((index + 1) / adFrequency);
+      // 홈 피드 광고와 겹치지 않게 오프셋 부여
+      const ad = MOCK_ADS[(adIndex + 1) % MOCK_ADS.length];
+      if (ad) {
+        feedItems.push({ type: 'ad', data: ad });
+      }
+    }
+  });
 
   const categories = ["전체", "맛집", "동네생활", "분실물", "취미/모임"];
 
@@ -92,6 +111,11 @@ export default async function CommunityPage({ searchParams }: { searchParams: Pr
         </div>
       </div>
 
+      {/* Top Banner Ad (Special Spot) */}
+      <div className="px-4 py-3">
+        <AdSlot ad={MOCK_ADS[0]} />
+      </div>
+
       {/* Posts List or Empty State */}
       {posts.length === 0 ? (
         <div className="px-6 py-20 flex flex-col items-center justify-center text-center">
@@ -107,61 +131,67 @@ export default async function CommunityPage({ searchParams }: { searchParams: Pr
         </div>
       ) : (
         <div className="divide-y divide-gray-100 pb-24">
-          {posts.map((post) => (
-            <Link key={post.id} href={`/community/${post.id}`} className="block p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors">
-              <div className="flex gap-2 items-center mb-2">
-                <span className="bg-gray-100 text-gray-600 text-[11px] font-bold px-2 py-0.5 rounded-md">
-                  {post.category}
-                </span>
+          {feedItems.map((item, idx) => (
+            item.type === 'ad' ? (
+              <div key={`ad-${idx}`} className="p-4 bg-surface-container-lowest/50">
+                <AdSlot ad={item.data} />
               </div>
-              
-              <div className="flex gap-4">
-                <div className="flex-1 min-w-0">
-                  <p className="text-[15px] text-gray-900 font-medium line-clamp-2 leading-snug mb-2">
-                    {post.content}
-                  </p>
-                  
-                  <div className="flex items-center gap-3 text-[12px] text-gray-400 font-medium mt-1">
-                    <div className="flex items-center gap-1">
-                      <span className="max-w-[80px] truncate">{post.profiles?.display_name || "익명"}</span>
-                    </div>
-                    <span>•</span>
-                    <span>{getTimeAgo(post.created_at)}</span>
-                    {(post.comments?.[0]?.count || 0) > 0 && (
-                      <>
-                        <span>•</span>
-                        <div className="flex items-center gap-1 text-[#ff6b6b]">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                          </svg>
-                          <span>{post.comments[0].count}</span>
-                        </div>
-                      </>
-                    )}
-                  </div>
+            ) : (
+              <Link key={item.data.id} href={`/community/${item.data.id}`} className="block p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors">
+                <div className="flex gap-2 items-center mb-2">
+                  <span className="bg-gray-100 text-gray-600 text-[11px] font-bold px-2 py-0.5 rounded-md">
+                    {item.data.category}
+                  </span>
                 </div>
-
-                {post.image_url && (
-                  <div className="w-[72px] h-[72px] rounded-xl overflow-hidden shrink-0 border border-black/5 relative bg-gray-50">
-                    <Image 
-                      src={getThumbnailUrl(post.image_url.split(',')[0], 200)} 
-                      alt="Post image" 
-                      fill 
-                      sizes="72px"
-                      className="object-contain p-1" 
-                    />
-                    {post.image_url.includes(',') && (
-                      <div className="absolute bottom-1 right-1 bg-black/60 backdrop-blur-md rounded-md p-1 z-10">
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                          <line x1="9" y1="3" x2="9" y2="21"></line>
-                        </svg>
+                
+                <div className="flex gap-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[15px] text-gray-900 font-medium line-clamp-2 leading-snug mb-2">
+                      {item.data.content}
+                    </p>
+                    
+                    <div className="flex items-center gap-3 text-[12px] text-gray-400 font-medium mt-1">
+                      <div className="flex items-center gap-1">
+                        <span className="max-w-[80px] truncate">{item.data.profiles?.display_name || "익명"}</span>
                       </div>
-                    )}
+                      <span>•</span>
+                      <span>{getTimeAgo(item.data.created_at)}</span>
+                      {(item.data.comments?.[0]?.count || 0) > 0 && (
+                        <>
+                          <span>•</span>
+                          <div className="flex items-center gap-1 text-[#ff6b6b]">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                            <span>{item.data.comments[0].count}</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
-            </Link>
+
+                  {item.data.image_url && (
+                    <div className="w-[72px] h-[72px] rounded-xl overflow-hidden shrink-0 border border-black/5 relative bg-gray-50">
+                      <Image 
+                        src={getThumbnailUrl(item.data.image_url.split(',')[0], 200)} 
+                        alt="Post image" 
+                        fill 
+                        sizes="72px"
+                        className="object-contain p-1" 
+                      />
+                      {item.data.image_url.includes(',') && (
+                        <div className="absolute bottom-1 right-1 bg-black/60 backdrop-blur-md rounded-md p-1 z-10">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="9" y1="3" x2="9" y2="21"></line>
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </Link>
+            )
           ))}
         </div>
       )}

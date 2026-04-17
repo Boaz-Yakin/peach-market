@@ -20,6 +20,8 @@ function getTimeAgo(dateString: string) {
 import SearchHeader from "../components/SearchHeader";
 import { createClient } from "../lib/supabaseServer";
 import { getThumbnailUrl } from "../lib/imageUtils";
+import AdSlot from "../components/AdSlot";
+import { MOCK_ADS } from "../lib/ads";
 
 interface HomeProps {
   searchParams: Promise<{ category?: string; q?: string; hide_sold?: string }>;
@@ -53,6 +55,20 @@ export default async function Home({ searchParams }: HomeProps) {
   const { data: dbItems } = await queryBuilder;
   const items = dbItems || [];
 
+  // 광고 삽입 로직: 5개 아이템마다 광고 1개 삽입
+  const adFrequency = 5;
+  const feedItems: any[] = [];
+  
+  items.forEach((item, index) => {
+    feedItems.push({ type: 'item', data: item });
+    if ((index + 1) % adFrequency === 0) {
+      const adIndex = Math.floor((index + 1) / adFrequency) - 1;
+      if (MOCK_ADS[adIndex % MOCK_ADS.length]) {
+        feedItems.push({ type: 'ad', data: MOCK_ADS[adIndex % MOCK_ADS.length] });
+      }
+    }
+  });
+
   return (
     <main className="min-h-screen bg-surface-container-low">
       <Suspense fallback={<div className="h-14 bg-surface" />}>
@@ -81,52 +97,56 @@ export default async function Home({ searchParams }: HomeProps) {
             </Link>
           </div>
         ) : (
-          items.map((item) => (
-            <Link 
-              href={`/item/${item.id}`} 
-              key={item.id} 
-              className="flex bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all active:scale-[0.98] group"
-            >
-              <div className="w-[120px] h-[120px] flex-shrink-0 relative overflow-hidden bg-surface-container-high">
-                <Image 
-                  src={getThumbnailUrl(item.image_url?.split(',')[0]) || ''} 
-                  alt={item.title} 
-                  fill 
-                  sizes="120px"
-                  className="object-contain p-1 group-hover:scale-110 transition-transform duration-500" 
-                />
-                
-                {/* 상태 뱃지 오버레이 */}
-                {item.status === "reserved" && (
-                  <div className="absolute inset-0 bg-primary/20 backdrop-blur-[2px] flex items-center justify-center">
-                    <span className="bg-blue-600 text-white text-[11px] font-black px-2 py-0.5 rounded-full shadow-lg">예약중</span>
+          feedItems.map((item, idx) => (
+            item.type === 'ad' ? (
+              <AdSlot key={`ad-${idx}`} ad={item.data} />
+            ) : (
+              <Link 
+                href={`/item/${item.data.id}`} 
+                key={item.data.id} 
+                className="flex bg-surface-container-lowest rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all active:scale-[0.98] group"
+              >
+                <div className="w-[120px] h-[120px] flex-shrink-0 relative overflow-hidden bg-surface-container-high">
+                  <Image 
+                    src={getThumbnailUrl(item.data.image_url?.split(',')[0]) || ''} 
+                    alt={item.data.title} 
+                    fill 
+                    sizes="120px"
+                    className="object-contain p-1 group-hover:scale-110 transition-transform duration-500" 
+                  />
+                  
+                  {/* 상태 뱃지 오버레이 */}
+                  {item.data.status === "reserved" && (
+                    <div className="absolute inset-0 bg-primary/20 backdrop-blur-[2px] flex items-center justify-center">
+                      <span className="bg-blue-600 text-white text-[11px] font-black px-2 py-0.5 rounded-full shadow-lg">예약중</span>
+                    </div>
+                  )}
+                  {item.data.status === "sold" && (
+                    <div className="absolute inset-0 bg-foreground/40 backdrop-blur-[2px] flex items-center justify-center">
+                      <span className="bg-foreground text-white text-[11px] font-black px-2 py-0.5 rounded-full shadow-lg">판매완료</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col justify-between p-4 flex-grow overflow-hidden">
+                  <div>
+                    <h3 className="text-[16px] font-bold text-foreground leading-snug truncate font-display">
+                      {item.data.title}
+                    </h3>
+                    <p className="text-[12px] text-foreground/50 mt-1 font-medium">
+                      {item.data.location} • {getTimeAgo(item.data.created_at)}
+                    </p>
+                    <div className="mt-2 inline-block">
+                      <span className="text-[10px] font-extrabold text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
+                        {item.data.category}
+                      </span>
+                    </div>
                   </div>
-                )}
-                {item.status === "sold" && (
-                  <div className="absolute inset-0 bg-foreground/40 backdrop-blur-[2px] flex items-center justify-center">
-                    <span className="bg-foreground text-white text-[11px] font-black px-2 py-0.5 rounded-full shadow-lg">판매완료</span>
-                  </div>
-                )}
-              </div>
-              <div className="flex flex-col justify-between p-4 flex-grow overflow-hidden">
-                <div>
-                  <h3 className="text-[16px] font-bold text-foreground leading-snug truncate font-display">
-                    {item.title}
-                  </h3>
-                  <p className="text-[12px] text-foreground/50 mt-1 font-medium">
-                    {item.location} • {getTimeAgo(item.created_at)}
-                  </p>
-                  <div className="mt-2 inline-block">
-                    <span className="text-[10px] font-extrabold text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20">
-                      {item.category}
-                    </span>
+                  <div className="font-extrabold text-[18px] text-primary mt-1 font-display">
+                    {isNaN(Number(item.data.price)) ? item.data.price : `$${Number(item.data.price).toLocaleString()}`}
                   </div>
                 </div>
-                <div className="font-extrabold text-[18px] text-primary mt-1 font-display">
-                  {isNaN(Number(item.price)) ? item.price : `$${Number(item.price).toLocaleString()}`}
-                </div>
-              </div>
-            </Link>
+              </Link>
+            )
           ))
         )}
       </div>
