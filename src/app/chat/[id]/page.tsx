@@ -695,7 +695,8 @@ export default function ChatRoomPage() {
         <div className={`overflow-hidden transition-all duration-300 max-w-2xl mx-auto ${isAttachmentMenuOpen ? "max-h-40 opacity-100 mt-4" : "max-h-0 opacity-0 mt-0"}`}>
           <div className="flex items-center gap-6 pt-2 pb-2 px-2 overflow-x-auto scrollbar-hide">
             {currentUser?.id === roomInfo.buyer_id && (
-              (messages.some(m => m.content.startsWith("[SAFE_PAY]")) && 
+              messages.some(m => m.content.startsWith("[SAFE_PAY]")) && 
+              (Object.keys(transactionData).length === 0 || 
                Object.values(transactionData).some((t: any) => t.status !== 'cancelled')) ? (
                 <div className="flex flex-col items-center gap-2 opacity-30 grayscale cursor-not-allowed shrink-0">
                   <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center text-2xl shadow-none border border-gray-200">

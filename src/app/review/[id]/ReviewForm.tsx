@@ -60,11 +60,11 @@ export default function ReviewForm({ itemId, itemTitle, targetId, targetName, us
       await supabase.from('notifications').insert({
         user_id: targetId,
         title: "🍑 피치 당도가 올라갔어요!",
-        content: `'${itemTitle}' 거래 후 따뜻한 평가를 받아 당도가 ${res.bonus.toFixed(1)}% 상승했습니다.`,
+        content: `'${itemTitle}' 거래 후 따뜻한 평가를 받아 당도가 ${(res.bonus ?? 0).toFixed(1)}% 상승했습니다.`,
         type: "review"
       });
 
-      alert(`평가가 완료되었습니다! ${targetName}님의 당도가 ${res.new_brix.toFixed(1)}%가 되었습니다. 🍑`);
+      alert(`평가가 완료되었습니다! ${targetName}님의 당도가 ${(res.new_brix ?? 36.5).toFixed(1)}%가 되었습니다. 🍑`);
       router.push(`/item/${itemId}`);
       router.refresh();
     } catch (err: any) {
