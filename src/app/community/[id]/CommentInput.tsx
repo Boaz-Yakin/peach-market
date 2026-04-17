@@ -68,7 +68,7 @@ export default function CommentInput({ postId }: { postId: string }) {
   };
 
   return (
-    <div className="fixed bottom-[64px] left-0 right-0 max-w-md mx-auto bg-white/90 backdrop-blur-md border-t border-gray-100 p-3 pb-safe z-[60] shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+    <div className="fixed bottom-[76px] left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-xl border-t border-gray-100 p-3 pb-2 z-[999] shadow-[0_-10px_30px_rgba(0,0,0,0.08)]">
       <form onSubmit={handleSubmit} className="flex gap-2">
         <input
           type="text"
