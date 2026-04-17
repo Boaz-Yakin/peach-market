@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import CategoryFilter from "../components/CategoryFilter";
+import LocalInfoWidget from "../components/LocalInfoWidget";
 import { Suspense } from "react";
 
 export const dynamic = 'force-dynamic';
@@ -79,6 +80,9 @@ export default async function Home({ searchParams }: HomeProps) {
       <Suspense fallback={<div className="h-12" />}>
         <CategoryFilter />
       </Suspense>
+
+      {/* Mini Local Info Widget for Quick Glance */}
+      <LocalInfoWidget />
 
       {/* Feed List (Editorial Showcase Style) */}
       <div className="px-4 py-4 space-y-4">
