@@ -60,6 +60,18 @@ export default function ChatRoomPage() {
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [locationSearch, setLocationSearch] = useState("");
   const [locationPreview, setLocationPreview] = useState("");
+  const [hasReviewed, setHasReviewed] = useState(false); // 리뷰 완료 여부 상태 추가
+
+  // 리뷰 상태 확인 함수
+  const checkReviewStatus = async (itemId: string, userId: string) => {
+    const { data } = await supabase
+      .from("reviews")
+      .select("id")
+      .eq("item_id", itemId)
+      .eq("reviewer_id", userId)
+      .single();
+    if (data) setHasReviewed(true);
+  };
 
   // 0. 결제 상태 업데이트 함수
   const updateTransactionStatus = async (txId: string, newStatus: 'paid' | 'completed' | 'cancelled') => {
@@ -139,7 +151,11 @@ export default function ChatRoomPage() {
           .eq("id", roomId)
           .single();
 
-        if (room) setRoomInfo(room as unknown as ChatRoom);
+        if (room) {
+          setRoomInfo(room as unknown as ChatRoom);
+          // 리뷰 상태 확인
+          checkReviewStatus(room.item.id, user.id);
+        }
 
         const { data: msgs } = await supabase
           .from("messages")
@@ -591,14 +607,20 @@ export default function ChatRoomPage() {
                               <div className="w-full py-3 rounded-2xl font-black text-[14px] bg-green-500 text-white text-center shadow-lg">
                                 거래 완료 🍑
                               </div>
-                              <Link 
-                                href={`/review/${roomInfo.item.id}?roomId=${roomId}`}
-                                className={`block w-full py-3 rounded-2xl font-black text-[14px] text-center shadow-md transition-all active:scale-95 ${
-                                  isMe ? "bg-primary text-white" : "bg-white text-primary border border-primary/20"
-                                }`}
-                              >
-                                {isBuyer ? "판매자 평가하기" : "구매자 평가하기"}
-                              </Link>
+                              {hasReviewed ? (
+                                <div className="w-full py-3 rounded-2xl font-black text-[14px] bg-surface-container-high text-foreground/40 text-center shadow-inner">
+                                  평가 완료 ✨
+                                </div>
+                              ) : (
+                                <Link 
+                                  href={`/review/${roomInfo.item.id}?roomId=${roomId}`}
+                                  className={`block w-full py-3 rounded-2xl font-black text-[14px] text-center shadow-md transition-all active:scale-95 ${
+                                    isMe ? "bg-primary text-white" : "bg-white text-primary border border-primary/20"
+                                  }`}
+                                >
+                                  {isBuyer ? "판매자 평가하기" : "구매자 평가하기"}
+                                </Link>
+                              )}
                             </div>
                           )}
 
