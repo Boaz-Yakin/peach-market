@@ -84,10 +84,19 @@ export default function ChatRoomPage() {
       if (error) throw error;
       
       // 로컬 상태 즉시 갱신
-      setTransactionData(prev => ({
-        ...prev,
-        [txId]: { ...prev[txId], status: newStatus }
-      }));
+      setTransactionData(prev => {
+        const next = {
+          ...prev,
+          [txId]: { ...prev[txId], status: newStatus }
+        };
+        return next;
+      });
+      
+      // 거래가 완료(completed)되면 리뷰 상태도 다시 체크하게 유도할 수 있음
+      if (newStatus === 'completed') {
+        // 잠시 후 리뷰 상태 체크 (DB 반영 시간 고려)
+        setTimeout(() => checkReviewStatus(roomInfo?.item.id || "", currentUser?.id || ""), 1000);
+      }
 
     } catch (err: any) {
       alert("거래 상태 변경에 실패했습니다: " + err.message);
@@ -686,16 +695,26 @@ export default function ChatRoomPage() {
         <div className={`overflow-hidden transition-all duration-300 max-w-2xl mx-auto ${isAttachmentMenuOpen ? "max-h-40 opacity-100 mt-4" : "max-h-0 opacity-0 mt-0"}`}>
           <div className="flex items-center gap-6 pt-2 pb-2 px-2 overflow-x-auto scrollbar-hide">
             {currentUser?.id === roomInfo.buyer_id && (
-              <button 
-                type="button"
-                onClick={handleRequestSafePay}
-                className="flex flex-col items-center gap-2 group shrink-0"
-              >
-                <div className="w-14 h-14 bg-primary/10 text-primary group-active:scale-95 rounded-full flex items-center justify-center text-2xl shadow-sm transition-transform border border-primary/20">
-                  🛡️
+              (messages.some(m => m.content.startsWith("[SAFE_PAY]")) && 
+               Object.values(transactionData).some((t: any) => t.status !== 'cancelled')) ? (
+                <div className="flex flex-col items-center gap-2 opacity-30 grayscale cursor-not-allowed shrink-0">
+                  <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center text-2xl shadow-none border border-gray-200">
+                    🛡️
+                  </div>
+                  <span className="text-[12px] font-bold text-gray-400 tracking-tight">결제 진행중</span>
                 </div>
-                <span className="text-[12px] font-bold text-primary tracking-tight">안심 결제</span>
-              </button>
+              ) : (
+                <button 
+                  type="button"
+                  onClick={handleRequestSafePay}
+                  className="flex flex-col items-center gap-2 group shrink-0"
+                >
+                  <div className="w-14 h-14 bg-primary/10 text-primary group-active:scale-95 rounded-full flex items-center justify-center text-2xl shadow-sm transition-transform border border-primary/20">
+                    🛡️
+                  </div>
+                  <span className="text-[12px] font-bold text-primary tracking-tight">안심 결제</span>
+                </button>
+              )
             )}
             <button 
               type="button"
