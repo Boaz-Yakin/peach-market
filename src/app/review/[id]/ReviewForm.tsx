@@ -38,7 +38,7 @@ export default function ReviewForm({ itemId, itemTitle, targetId, targetName, us
     setIsSubmitting(true);
 
     try {
-      // 1. 단일 RPC 호출로 트랜잭션 처리 (보안 및 정합성 확보)
+      // 1. RPC 호출
       const { data, error: rpcError } = await supabase.rpc('submit_review', {
         p_item_id: itemId,
         p_reviewer_id: userId,
@@ -48,25 +48,28 @@ export default function ReviewForm({ itemId, itemTitle, targetId, targetName, us
 
       if (rpcError) throw rpcError;
 
-      const { success, message, new_brix, bonus } = data as { success: boolean, message?: string, new_brix: number, bonus: number };
+      const res = data as { success: boolean, message?: string, new_brix: number, bonus: number };
 
-      if (!success) throw new Error(message || "평가 반영에 실패했습니다.");
+      if (!res.success) {
+        alert(`반영 실패: ${res.message || "알 수 없는 이유"}`);
+        setIsSubmitting(false);
+        return;
+      }
 
-      // 2. 알림 전송 (신뢰 기반 인터랙션)
+      // 2. 알림 전속
       await supabase.from('notifications').insert({
         user_id: targetId,
         title: "🍑 피치 당도가 올라갔어요!",
-        content: `'${itemTitle}' 거래 후 따뜻한 평가를 받아 당도가 ${bonus.toFixed(1)}% 상승했습니다.`,
+        content: `'${itemTitle}' 거래 후 따뜻한 평가를 받아 당도가 ${res.bonus.toFixed(1)}% 상승했습니다.`,
         type: "review"
       });
 
-      alert(`평가가 완료되었습니다! ${targetName}님의 당도가 ${new_brix.toFixed(1)}%가 되었습니다. 🍑`);
+      alert(`평가가 완료되었습니다! ${targetName}님의 당도가 ${res.new_brix.toFixed(1)}%가 되었습니다. 🍑`);
       router.push(`/item/${itemId}`);
-      router.refresh(); // 상세 페이지 새로고침 유도
+      router.refresh();
     } catch (err: any) {
-      console.error("Evaluation submission failed:", err);
-      const errorMessage = err.message || "알 수 없는 오류가 발생했습니다.";
-      alert(`평가 반영 중 오류가 발생했습니다: ${errorMessage}\n(이미 평가하셨거나 서버 설정이 필요할 수 있습니다)`);
+      console.error("Critical evaluation error:", err);
+      alert(`시스템 오류: ${err.message || "서버 통신 실패"}`);
     } finally {
       setIsSubmitting(false);
     }
