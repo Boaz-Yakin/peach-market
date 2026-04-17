@@ -213,7 +213,7 @@ export default async function ItemDetailPage({ params }: PageProps) {
           <div className="mx-6 mt-8 p-6 bg-primary-container/20 rounded-3xl border border-primary/20 flex flex-col items-center text-center">
             <div className="text-4xl mb-4">🤝</div>
             <h3 className="text-[18px] font-black text-primary font-display mb-2">거래가 완료되었나요?</h3>
-            <p className="text-[14px] text-primary/70 mb-6 font-medium">상대방에게 '피치 당도'를 선물해 주세요!</p>
+            <p className="text-[14px] text-primary/70 mb-6 font-medium">상대방에게 &apos;피치 당도&apos;를 선물해 주세요!</p>
             <Link 
               href={`/review/${item.id}`}
               className="w-full py-4 bg-primary text-white rounded-2xl font-black text-[16px] shadow-xl shadow-primary/30 btn-soft"

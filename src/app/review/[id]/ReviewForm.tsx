@@ -106,7 +106,7 @@ export default function ReviewForm({ itemId, itemTitle, targetId, targetName, us
             {targetName}님과의<br />거래는 어떠셨나요?
           </h2>
           <p className="text-[14px] text-foreground/40 font-medium tracking-tight">
-            전달해주신 평가는 상대방의 '피치 당도'에 반영되어<br />신뢰받는 커뮤니티를 만드는 데 큰 힘이 됩니다.
+            전달해주신 평가는 상대방의 &apos;피치 당도&apos;에 반영되어<br />신뢰받는 커뮤니티를 만드는 데 큰 힘이 됩니다.
           </p>
         </div>
 
@@ -132,7 +132,7 @@ export default function ReviewForm({ itemId, itemTitle, targetId, targetName, us
            <h4 className="text-[15px] font-bold text-foreground mb-2 font-display">💡 팁!</h4>
            <p className="text-[13px] text-foreground/60 leading-relaxed">
              솔직하고 정성스러운 평가는 이웃 간의 따뜻한 연결을 돕습니다. 
-             거래 중 불편한 점이 있었다면 '신고하기' 기능을 통해 알려주세요.
+             거래 중 불편한 점이 있었다면 &apos;신고하기&apos; 기능을 통해 알려주세요.
            </p>
         </div>
       </main>
