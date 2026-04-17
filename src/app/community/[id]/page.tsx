@@ -141,8 +141,6 @@ export default async function CommunityDetailPage(props: { params: Promise<{ id:
               )}
             </div>
           )}
-
-          </div>
         </div>
 
         {/* --- YouTube Style: Comment Input here! --- */}

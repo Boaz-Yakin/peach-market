@@ -71,12 +71,16 @@ export default function ReviewForm({ itemId, itemTitle, targetId, targetName, us
       }
 
       // 3. 알림 전송
-      await supabase.from('notifications').insert({
-        user_id: targetId,
-        title: "🍑 피치 당도가 올라갔어요!",
-        content: `&apos;${itemTitle}&apos; 거래 후 따뜻한 평가를 받아 당도가 ${(res.bonus ?? 0).toFixed(1)}% 상승했습니다.`,
-        type: "review"
-      }).catch(e => console.error("Notification failed:", e));
+      try {
+        await supabase.from('notifications').insert({
+          user_id: targetId,
+          title: "🍑 피치 당도가 올라갔어요!",
+          content: `&apos;${itemTitle}&apos; 거래 후 따뜻한 평가를 받아 당도가 ${(res.bonus ?? 0).toFixed(1)}% 상승했습니다.`,
+          type: "review"
+        });
+      } catch (e) {
+        console.error("Notification failed:", e);
+      }
 
       alert(`평가가 완료되었습니다! ${targetName}님의 당도가 ${(res.new_brix ?? 36.5).toFixed(1)}%가 되었습니다. 🍑`);
       router.push(`/item/${itemId}`);
