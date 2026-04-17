@@ -48,9 +48,9 @@ export default function ReviewForm({ itemId, itemTitle, targetId, targetName, us
 
       if (rpcError) throw rpcError;
 
-      const { success, new_brix, bonus } = data as { success: boolean, new_brix: number, bonus: number };
+      const { success, message, new_brix, bonus } = data as { success: boolean, message?: string, new_brix: number, bonus: number };
 
-      if (!success) throw new Error("평가 반영에 실패했습니다.");
+      if (!success) throw new Error(message || "평가 반영에 실패했습니다.");
 
       // 2. 알림 전송 (신뢰 기반 인터랙션)
       await supabase.from('notifications').insert({
