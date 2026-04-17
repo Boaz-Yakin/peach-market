@@ -587,8 +587,18 @@ export default function ChatRoomPage() {
                           )}
 
                           {tx.status === 'completed' && (
-                            <div className="w-full py-3 rounded-2xl font-black text-[14px] bg-green-500 text-white text-center shadow-lg">
-                              거래 완료 🍑
+                            <div className="space-y-3">
+                              <div className="w-full py-3 rounded-2xl font-black text-[14px] bg-green-500 text-white text-center shadow-lg">
+                                거래 완료 🍑
+                              </div>
+                              <Link 
+                                href={`/review/${roomInfo.item.id}?roomId=${roomId}`}
+                                className={`block w-full py-3 rounded-2xl font-black text-[14px] text-center shadow-md transition-all active:scale-95 ${
+                                  isMe ? "bg-primary text-white" : "bg-white text-primary border border-primary/20"
+                                }`}
+                              >
+                                {isBuyer ? "판매자 평가하기" : "구매자 평가하기"}
+                              </Link>
                             </div>
                           )}
 
