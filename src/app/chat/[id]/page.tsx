@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "../../../lib/supabaseBrowser";
 import { compressImage } from "../../../lib/imageUtils";
+import { calculatePeachFee } from "../../../lib/paymentUtils";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -12,6 +13,13 @@ interface Message {
   sender_id: string;
   content: string;
   created_at: string;
+}
+
+interface Transaction {
+  id: string;
+  status: 'pending' | 'paid' | 'completed' | 'cancelled';
+  amount: number;
+  fee: number;
 }
 
 interface ChatRoom {
@@ -34,6 +42,7 @@ export default function ChatRoomPage() {
   const [supabase] = useState(() => createClient());
   
   const [messages, setMessages] = useState<Message[]>([]);
+  const [transactionData, setTransactionData] = useState<Record<string, Transaction>>({});
   const [newMessage, setNewMessage] = useState("");
   const [roomInfo, setRoomInfo] = useState<ChatRoom | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -51,6 +60,52 @@ export default function ChatRoomPage() {
   const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
   const [locationSearch, setLocationSearch] = useState("");
   const [locationPreview, setLocationPreview] = useState("");
+
+  // 0. 결제 상태 업데이트 함수
+  const updateTransactionStatus = async (txId: string, newStatus: 'paid' | 'completed' | 'cancelled') => {
+    try {
+      const { error } = await supabase
+        .from("transactions")
+        .update({ status: newStatus })
+        .eq("id", txId);
+      
+      if (error) throw error;
+      
+      // 로컬 상태 즉시 갱신
+      setTransactionData(prev => ({
+        ...prev,
+        [txId]: { ...prev[txId], status: newStatus }
+      }));
+
+    } catch (err: any) {
+      alert("거래 상태 변경에 실패했습니다: " + err.message);
+    }
+  };
+
+  // 실시간 메시지에서 거래 ID 추출하여 상태 동기화
+  useEffect(() => {
+    const safePayIds = messages
+      .filter(m => m.content.startsWith("[SAFE_PAY]"))
+      .map(m => m.content.replace("[SAFE_PAY]", "").trim());
+    
+    if (safePayIds.length > 0) {
+      const fetchTransactions = async () => {
+        const { data } = await supabase
+          .from("transactions")
+          .select("*")
+          .in("id", safePayIds);
+        
+        if (data) {
+          const txMap: Record<string, Transaction> = {};
+          data.forEach(tx => {
+            txMap[tx.id] = tx as Transaction;
+          });
+          setTransactionData(prev => ({ ...prev, ...txMap }));
+        }
+      };
+      fetchTransactions();
+    }
+  }, [messages, supabase]);
 
   // 환경변수 체크용
   const hasEnv = !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
@@ -271,6 +326,52 @@ export default function ChatRoomPage() {
     }
   };
   
+  const handleRequestSafePay = async () => {
+    if (!currentUser || !roomInfo) return;
+    
+    // 구매자만 요청 가능하도록 체크
+    if (currentUser.id !== roomInfo.buyer_id) {
+      alert("안심 결제는 구매자만 요청할 수 있습니다.");
+      return;
+    }
+
+    const amount = roomInfo.item.price;
+    const fee = calculatePeachFee(amount);
+    
+    setIsAttachmentMenuOpen(false);
+
+    try {
+      // 1. Transactions 테이블에 내역 생성
+      const { data: tx, error: txError } = await supabase
+        .from("transactions")
+        .insert({
+          item_id: roomInfo.item.id,
+          buyer_id: roomInfo.buyer_id,
+          seller_id: roomInfo.seller_id,
+          amount: amount,
+          fee: fee,
+          status: 'pending'
+        })
+        .select()
+        .single();
+
+      if (txError) throw txError;
+
+      // 2. 채팅방에 특수 결제 메시지 전송
+      const content = `[SAFE_PAY] ${tx.id}`;
+      const { error: messageError } = await supabase.from("messages").insert({
+        room_id: roomId,
+        sender_id: currentUser.id,
+        content: content,
+      });
+
+      if (messageError) throw messageError;
+
+    } catch (err: any) {
+      alert("안심 결제 요청에 실패했습니다: " + err.message);
+    }
+  };
+  
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0 || !currentUser) return;
     
@@ -365,15 +466,16 @@ export default function ChatRoomPage() {
         {messages.map((msg) => {
           const isMe = msg.sender_id === currentUser?.id;
           const isLocation = msg.content.startsWith("[LOCATION]");
+          const isSafePay = msg.content.startsWith("[SAFE_PAY]");
           
           return (
             <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
               <div
-                className={`max-w-[85%] px-5 py-3 rounded-[24px] text-[15px] font-medium transition-all shadow-sm ${
+                className={`max-w-[85%] rounded-[24px] text-[15px] font-medium transition-all shadow-sm ${
                   isMe
                     ? "bg-primary text-white rounded-br-none shadow-primary/10"
                     : "bg-surface-container-lowest text-foreground rounded-bl-none shadow-black/5 border border-surface-container-high/50"
-                } ${msg.content.startsWith("[IMAGE]") ? "p-1 overflow-hidden border-0" : "px-5 py-3"}`}
+                } ${msg.content.startsWith("[IMAGE]") || isSafePay ? "p-1 overflow-hidden border-0" : "px-5 py-3"}`}
               >
                 {msg.content.startsWith("[IMAGE]") ? (
                   <div className="relative group">
@@ -391,7 +493,7 @@ export default function ChatRoomPage() {
                     <div className="absolute inset-0 bg-black/0 group-active:bg-black/10 transition-colors pointer-events-none rounded-[20px]" />
                   </div>
                 ) : isLocation ? (
-                  <div className="space-y-3">
+                  <div className="p-4 space-y-3">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-xl">📍</span>
                       <span className="font-black font-display">약속 장소 공유</span>
@@ -420,6 +522,85 @@ export default function ChatRoomPage() {
                       </a>
                     </div>
                   </div>
+                ) : isSafePay ? (
+                  (() => {
+                    const txId = msg.content.replace("[SAFE_PAY]", "").trim();
+                    const tx = transactionData[txId];
+                    if (!tx) return <div className="p-5 text-[12px] opacity-40 italic">결제 정보를 불러오는 중...</div>;
+
+                    const isBuyer = currentUser?.id === roomInfo.buyer_id;
+                    
+                    return (
+                      <div className={`p-5 min-w-[240px] ${isMe ? "bg-white text-foreground" : "bg-primary text-white"}`}>
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="text-xl">🛡️</span>
+                          <span className={`font-black font-display text-[16px] ${isMe ? "text-primary": "text-white"}`}>
+                            Peach Safe-Pay
+                          </span>
+                        </div>
+                        <div className="space-y-4">
+                          <div className="bg-surface-container-low/30 p-4 rounded-xl space-y-2 border border-black/5">
+                            <div className="flex justify-between items-center text-[13px]">
+                              <span className="opacity-60">상품 금액</span>
+                              <span className="font-bold">${tx.amount.toLocaleString()}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-[13px]">
+                              <span className="opacity-60 text-primary font-bold">안심 서비스 수수료</span>
+                              <span className="font-bold text-primary">${tx.fee.toLocaleString()}</span>
+                            </div>
+                            <div className="h-px bg-black/5 my-2" />
+                            <div className="flex justify-between items-center">
+                              <span className="text-[14px] font-black">총 결제 금액</span>
+                              <span className={`text-[18px] font-black ${isMe ? "text-primary" : "text-white"}`}>
+                                ${(tx.amount + tx.fee).toLocaleString()}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          {/* 상태별 버튼 로직 */}
+                          {tx.status === 'pending' && (
+                            <button 
+                              onClick={() => isBuyer && updateTransactionStatus(txId, 'paid')}
+                              disabled={!isBuyer}
+                              className={`w-full py-3 rounded-2xl font-black text-[14px] shadow-lg transition-all active:scale-95 ${
+                                isBuyer 
+                                  ? (isMe ? "bg-primary text-white" : "bg-white text-primary") 
+                                  : "bg-surface-container-high text-foreground/30 cursor-default"
+                              }`}
+                            >
+                              {isBuyer ? "지금 결제하기" : "결제 대기 중"}
+                            </button>
+                          )}
+
+                          {tx.status === 'paid' && (
+                            <button 
+                              onClick={() => isBuyer && updateTransactionStatus(txId, 'completed')}
+                              disabled={!isBuyer}
+                              className={`w-full py-3 rounded-2xl font-black text-[14px] shadow-lg transition-all active:scale-95 ${
+                                isBuyer 
+                                  ? (isMe ? "bg-primary text-white" : "bg-white text-primary") 
+                                  : "bg-surface-container-high text-foreground/30 cursor-default"
+                              }`}
+                            >
+                              {isBuyer ? "구매 확정하기" : "대금 보관 중"}
+                            </button>
+                          )}
+
+                          {tx.status === 'completed' && (
+                            <div className="w-full py-3 rounded-2xl font-black text-[14px] bg-green-500 text-white text-center shadow-lg">
+                              거래 완료 🍑
+                            </div>
+                          )}
+
+                          <p className="text-[10px] text-center opacity-40 leading-tight">
+                            {tx.status === 'completed' 
+                              ? "안전하게 거래가 완료되었습니다." 
+                              : "에스크로 결제 시 상품을 확인 전까지 대금이 판매자에게 지급되지 않아 안전합니다."}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })()
                 ) : (
                   msg.content
                 )}
@@ -471,14 +652,26 @@ export default function ChatRoomPage() {
 
         {/* 첨부 메뉴 패널 */}
         <div className={`overflow-hidden transition-all duration-300 max-w-2xl mx-auto ${isAttachmentMenuOpen ? "max-h-40 opacity-100 mt-4" : "max-h-0 opacity-0 mt-0"}`}>
-          <div className="flex items-center gap-6 pt-2 pb-2 px-2">
+          <div className="flex items-center gap-6 pt-2 pb-2 px-2 overflow-x-auto scrollbar-hide">
+            {currentUser?.id === roomInfo.buyer_id && (
+              <button 
+                type="button"
+                onClick={handleRequestSafePay}
+                className="flex flex-col items-center gap-2 group shrink-0"
+              >
+                <div className="w-14 h-14 bg-primary/10 text-primary group-active:scale-95 rounded-full flex items-center justify-center text-2xl shadow-sm transition-transform border border-primary/20">
+                  🛡️
+                </div>
+                <span className="text-[12px] font-bold text-primary tracking-tight">안심 결제</span>
+              </button>
+            )}
             <button 
               type="button"
               onClick={() => {
                 setIsAttachmentMenuOpen(false);
                 setIsLocationModalOpen(true);
               }}
-              className="flex flex-col items-center gap-2 group"
+              className="flex flex-col items-center gap-2 group shrink-0"
             >
               <div className="w-14 h-14 bg-surface-container-highest group-active:scale-95 rounded-full flex items-center justify-center text-2xl shadow-sm transition-transform">
                 📍
