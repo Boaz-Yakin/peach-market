@@ -56,7 +56,20 @@ export default function ReviewForm({ itemId, itemTitle, targetId, targetName, us
         return;
       }
 
-      // 2. 알림 전속
+      // 2. reviews 테이블에 명시적 기록 (조회 및 중복 방지용)
+      // RPC에서 이미 처리했을 수 있으나, 조회용 데이터 보장을 위해 한번 더 시도 (Unique 제약조건이 막아줌)
+      try {
+        await supabase.from('reviews').upsert({
+          item_id: itemId,
+          reviewer_id: userId,
+          target_id: targetId,
+          rating_badges: selectedBadges,
+        }, { onConflict: 'item_id, reviewer_id' });
+      } catch (reviewErr) {
+        console.warn("Manual review log skipped or already exists:", reviewErr);
+      }
+
+      // 3. 알림 전송
       await supabase.from('notifications').insert({
         user_id: targetId,
         title: "🍑 피치 당도가 올라갔어요!",
