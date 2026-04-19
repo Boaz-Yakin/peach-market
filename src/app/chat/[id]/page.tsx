@@ -62,6 +62,7 @@ export default function ChatRoomPage() {
   const [locationSearch, setLocationSearch] = useState("");
   const [locationPreview, setLocationPreview] = useState("");
   const [hasReviewed, setHasReviewed] = useState(false); // 리뷰 완료 여부 상태 추가
+  const isInitialLoad = useRef(true); // [Zegal's Add] 첫 진입 판별용
 
   // 리뷰 상태 확인 함수
   const checkReviewStatus = async (itemId: string, userId: string) => {
@@ -275,7 +276,13 @@ export default function ChatRoomPage() {
         .order("created_at", { ascending: false });
         
       if (msgs) {
-        setMessages(msgs);
+        // [Zegal's Optimization] 데이터가 실제로 변했을 때만 상태 갱신 (스크롤 점프 방지)
+        setMessages(prev => {
+          if (prev.length > 0 && msgs.length > 0 && prev[0].id === msgs[0].id && prev.length === msgs.length) {
+            return prev;
+          }
+          return msgs;
+        });
         
         // 상대방이 보낸(내가 받지 않은) 메시지 중 안 읽은 것들을 '읽음' 처리
         const myId = currentUserRef.current?.id;
@@ -339,16 +346,30 @@ export default function ChatRoomPage() {
     }
   }, [roomInfo]);
 
-  // 새 메시지가 추가될 때마다 네이티브 스크롤을 최하단으로 유지
+  // 새 메시지가 추가될 때마다 네이티브 스크롤을 최하단으로 유지 (지능형 상태 감지 추가)
   useEffect(() => {
-    // 0.1초 뒤에 스크롤을 이동하여 렌더링 후의 높이를 완벽하게 감지
-    setTimeout(() => {
-      window.scrollTo({
-        top: document.documentElement.scrollHeight,
-        behavior: "smooth",
-      });
-    }, 100);
-  }, [messages]);
+    // [Zegal's Intelligent Scroll]
+    // 1. 첫 진입이거나 (isInitialLoad)
+    // 2. 사용자가 이미 바닥 근처에 있거나(100px 이내)
+    // 3. 마지막 메시지가 본인이 보낸 것이라면 스크롤을 내립니다.
+    const isNearBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 100;
+    const lastMessageIsMine = messages.length > 0 && messages[0].sender_id === currentUser?.id;
+
+    if (isInitialLoad.current || isNearBottom || lastMessageIsMine) {
+      // 0.1초 뒤에 스크롤을 이동하여 렌더링 후의 높이를 완벽하게 감지
+      setTimeout(() => {
+        window.scrollTo({
+          top: document.documentElement.scrollHeight,
+          behavior: "smooth",
+        });
+        
+        // 메시지가 로드된 후 첫 스크롤이 완료되면 초기 로드 상태 해제
+        if (messages.length > 0) {
+          isInitialLoad.current = false;
+        }
+      }, 100);
+    }
+  }, [messages, currentUser?.id]);
 
   // 4. 채팅방 메뉴 기능
   const handleLeaveRoom = async () => {
@@ -571,10 +592,13 @@ export default function ChatRoomPage() {
                       alt="Shared content" 
                       className="max-w-full max-h-[300px] object-cover rounded-[20px]"
                       onLoad={() => {
-                        window.scrollTo({
-                          top: document.documentElement.scrollHeight,
-                          behavior: "smooth",
-                        });
+                        const isNearBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 150;
+                        if (isNearBottom || msg.sender_id === currentUser?.id) {
+                          window.scrollTo({
+                            top: document.documentElement.scrollHeight,
+                            behavior: "smooth",
+                          });
+                        }
                       }}
                     />
                     <div className="absolute inset-0 bg-black/0 group-active:bg-black/10 transition-colors pointer-events-none rounded-[20px]" />
